@@ -43,13 +43,15 @@ export const AppProvider = ({ children }) => {
       }
 
       try {
-        const [leadsRes, formsRes, usersRes] = await Promise.all([
+        const [leadsRes, formsRes, usersRes, followupsRes] = await Promise.all([
           api.get('/leads/'),
           api.get('/forms/'),
-          api.get('/users/')
+          api.get('/users/'),
+          api.get('/followups/')
         ]);
         setLeads(leadsRes.data);
         setCounselors(usersRes.data || []);
+        setFollowups(followupsRes.data || []);
         
         const fetchedForms = formsRes.data.map(form => ({
           ...form,

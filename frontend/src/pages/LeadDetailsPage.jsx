@@ -24,7 +24,7 @@ import {
 export default function LeadDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { leads, followups, formFields, addFollowup, updateLead } = useApp();
+  const { leads, followups, formFields, counselors, addFollowup, updateLead } = useApp();
 
   const [isFollowupModalOpen, setIsFollowupModalOpen] = useState(false);
   
@@ -35,7 +35,7 @@ export default function LeadDetailsPage() {
   const [reminderDate, setReminderDate] = useState('');
 
   // 1. Fetch Lead
-  const lead = leads.find(l => l.id === id);
+  const lead = leads.find(l => String(l.id) === id);
   if (!lead) {
     return (
       <div className="glass-panel p-12 text-center rounded-3xl space-y-4">
@@ -48,26 +48,87 @@ export default function LeadDetailsPage() {
     );
   }
 
+  // Helper to get dynamic field value
+  const getFieldValue = (label) => {
+    if (!lead) return '';
+    const fv = (lead.field_values || []).find(v => v.field?.label === label);
+    return fv ? fv.value : '';
+  };
+
+  // Helper to get custom field value by field_id
+  const getCustomFieldValue = (fieldId) => {
+    if (!lead) return '';
+    const fv = (lead.field_values || []).find(v => v.field_id === fieldId);
+    return fv ? fv.value : '';
+  };
+
+  // Helper to parse type/notes from note string
+  const getFollowupDetails = (fup) => {
+    const match = (fup.note || '').match(/^\[(.*?)\] (.*)$/s);
+    if (match) {
+      return {
+        type: match[1],
+        notes: match[2]
+      };
+    }
+    return {
+      type: 'Call', // default fallback
+      notes: fup.note || ''
+    };
+  };
+
+  // Helper to get counselor name by ID
+  const getCounselorName = (counselorId) => {
+    const c = counselors.find(item => item.id === counselorId);
+    return c ? c.full_name : 'Elena Rostova';
+  };
+
   // 2. Fetch Lead Follow-ups
-  const leadFollowups = followups.filter(f => f.leadId === id)
-    .sort((a,b) => new Date(b.date) - new Date(a.date));
+  const leadFollowups = followups.filter(f => String(f.lead_id) === id)
+    .sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+
+  const mappedFollowups = leadFollowups.map(fup => {
+    const details = getFollowupDetails(fup);
+    const counselorName = getCounselorName(fup.counselor_id);
+    const reminderDateFormatted = fup.scheduled_at ? new Date(fup.scheduled_at).toLocaleDateString() : null;
+    return {
+      id: fup.id,
+      type: details.type,
+      notes: details.notes,
+      counselor: counselorName,
+      reminderDate: reminderDateFormatted,
+      date: fup.created_at
+    };
+  });
 
   // 3. Compile custom fields response
-  const defaultFieldIds = ['f_name', 'f_email', 'f_phone', 'f_course', 'f_source', 'f_counselor', 'f_status', 'f_notes'];
-  const customFieldsConfig = formFields.filter(field => !defaultFieldIds.includes(field.id));
+  const customFieldsConfig = formFields.filter(field => !field.is_core);
 
   // Handle follow-up submission
   const handleAddFollowup = (e) => {
     e.preventDefault();
     if (!fupNotes.trim()) return;
 
+    // Save formatted type in the note
+    const noteContent = `[${fupType}] ${fupNotes}`;
+
     addFollowup(lead.id, {
-      type: fupType,
-      notes: fupNotes,
-      newStatus: fupNewStatus || undefined,
-      counselor: lead.counselor || 'Elena Rostova',
-      reminderDate: reminderDate || undefined
+      note: noteContent,
+      scheduledAt: reminderDate || undefined
     });
+
+    // If a new status is provided, update the lead status
+    if (fupNewStatus) {
+      updateLead({
+        id: lead.id,
+        full_name: lead.full_name,
+        email: lead.email,
+        phone: lead.phone,
+        status: fupNewStatus,
+        form_id: lead.form_id,
+        counselor_id: lead.counselor_id
+      });
+    }
 
     // Reset state & Close
     setFupNotes('');
@@ -124,11 +185,11 @@ export default function LeadDetailsPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start gap-4">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white text-lg font-black shadow-lg shadow-indigo-500/10">
-              {lead.name.split(' ').map(n => n[0]).join('')}
+              {(lead.full_name || '').split(' ').map(n => n[0]).join('')}
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2.5">
-                <h2 className="text-lg font-black text-slate-800 dark:text-slate-100">{lead.name}</h2>
+                <h2 className="text-lg font-black text-slate-800 dark:text-slate-100">{lead.full_name}</h2>
                 <StatusBadge status={lead.status} />
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex flex-wrap gap-x-4 gap-y-1">
@@ -139,8 +200,8 @@ export default function LeadDetailsPage() {
           </div>
           <div className="text-left md:text-right shrink-0">
             <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">Assigned Counselor</span>
-            <span className="block text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">{lead.counselor || 'Unassigned'}</span>
-            <span className="block text-[9px] text-slate-400 mt-1">Inquiry Registered: {lead.dateCreated}</span>
+            <span className="block text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">{getCounselorName(lead.counselor_id) || 'Unassigned'}</span>
+            <span className="block text-[9px] text-slate-400 mt-1">Inquiry Registered: {new Date(lead.created_at).toLocaleDateString()}</span>
           </div>
         </div>
       </div>
@@ -160,16 +221,16 @@ export default function LeadDetailsPage() {
             <div className="space-y-3.5 text-xs">
               <div>
                 <span className="text-slate-400 block font-medium">Course of Interest</span>
-                <span className="text-slate-800 dark:text-slate-200 font-bold mt-0.5 block">{lead.course}</span>
+                <span className="text-slate-800 dark:text-slate-200 font-bold mt-0.5 block">{getFieldValue("Course of Interest") || 'N/A'}</span>
               </div>
               <div>
                 <span className="text-slate-400 block font-medium">Inquiry Channel</span>
-                <span className="text-slate-800 dark:text-slate-200 font-semibold mt-0.5 block">{lead.source || 'Direct Search'}</span>
+                <span className="text-slate-800 dark:text-slate-200 font-semibold mt-0.5 block">{getFieldValue("Source") || 'Direct Search'}</span>
               </div>
               <div>
                 <span className="text-slate-400 block font-medium">Additional Notes</span>
                 <p className="text-slate-600 dark:text-slate-400 mt-1 leading-relaxed border-l-2 border-indigo-500/20 pl-2.5">
-                  {lead.notes || 'No counselor notes logged.'}
+                  {getFieldValue("Internal Notes") || 'No counselor notes logged.'}
                 </p>
               </div>
             </div>
@@ -183,7 +244,7 @@ export default function LeadDetailsPage() {
               </h3>
               <div className="space-y-4 text-xs">
                 {customFieldsConfig.map((field) => {
-                  const val = lead.customFields?.[field.id];
+                  const val = getCustomFieldValue(field.id);
                   return (
                     <div key={field.id} className="border-b border-slate-100 dark:border-slate-800/40 pb-3 last:border-b-0 last:pb-0">
                       <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">{field.label}</span>
@@ -203,13 +264,13 @@ export default function LeadDetailsPage() {
               <Clock className="w-4 h-4" /> Next Reminder Schedules
             </h3>
             
-            {leadFollowups.filter(f => f.reminderDate).length === 0 ? (
+            {mappedFollowups.filter(f => f.reminderDate).length === 0 ? (
               <div className="text-center py-4 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
                 <span className="text-[10px] text-slate-400">No callbacks scheduled.</span>
               </div>
             ) : (
               <div className="space-y-3">
-                {leadFollowups.filter(f => f.reminderDate).map((fup, i) => (
+                {mappedFollowups.filter(f => f.reminderDate).map((fup, i) => (
                   <div key={i} className="p-3 bg-amber-500/5 border border-amber-500/10 rounded-2xl flex items-center justify-between">
                     <div>
                       <span className="block text-xs font-bold text-amber-700 dark:text-amber-400">Callback Task</span>
@@ -244,12 +305,12 @@ export default function LeadDetailsPage() {
 
             {/* Vertical Timeline */}
             <div className="space-y-6 relative pl-3.5 border-l-2 border-slate-200/60 dark:border-slate-800/80 ml-2 py-1">
-              {leadFollowups.length === 0 ? (
+              {mappedFollowups.length === 0 ? (
                 <div className="text-center py-12 text-slate-400 dark:text-slate-600 text-xs">
                   No communication history has been logged for this student yet. Click "Log Conversation" to add one.
                 </div>
               ) : (
-                leadFollowups.map((fup, i) => (
+                mappedFollowups.map((fup, i) => (
                   <div key={fup.id} className="relative group">
                     {/* Circle timeline pin */}
                     <span className="absolute left-[-22px] top-1.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-950 bg-indigo-600 z-10" />
@@ -295,7 +356,7 @@ export default function LeadDetailsPage() {
       <Modal
         isOpen={isFollowupModalOpen}
         onClose={() => setIsFollowupModalOpen(false)}
-        title={`Log Discussion for ${lead.name}`}
+        title={`Log Discussion for ${lead.full_name}`}
         size="md"
       >
         <form onSubmit={handleAddFollowup} className="space-y-4">
