@@ -24,7 +24,7 @@ import {
 export default function LeadDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { leads, followups, formFields, counselors, addFollowup, updateLead } = useApp();
+  const { leads, followups, formFields, counselors, forms, addFollowup, updateLead } = useApp();
 
   const [isFollowupModalOpen, setIsFollowupModalOpen] = useState(false);
   
@@ -36,6 +36,7 @@ export default function LeadDetailsPage() {
 
   // 1. Fetch Lead
   const lead = leads.find(l => String(l.id) === id);
+  const leadForm = lead ? (forms || []).find(f => f.id === lead.form_id) : null;
   if (!lead) {
     return (
       <div className="glass-panel p-12 text-center rounded-3xl space-y-4">
@@ -172,12 +173,14 @@ export default function LeadDetailsPage() {
         >
           <ArrowLeft className="w-4 h-4" /> Back to Directory
         </Link>
-        <Link
-          to={`/leads/edit/${lead.id}`}
-          className="px-3.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 hover:bg-slate-50/50 border border-slate-200/50 dark:border-slate-800 rounded-xl flex items-center gap-1.5 transition-all"
-        >
-          <Edit className="w-3.5 h-3.5" /> Edit Profile
-        </Link>
+        {leadForm?.name === "Active Intake Form" && (
+          <Link
+            to={`/leads/edit/${lead.id}`}
+            className="px-3.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 hover:bg-slate-50/50 border border-slate-200/50 dark:border-slate-800 rounded-xl flex items-center gap-1.5 transition-all"
+          >
+            <Edit className="w-3.5 h-3.5" /> Edit Profile
+          </Link>
+        )}
       </div>
 
       {/* Student Profile Info Banner */}

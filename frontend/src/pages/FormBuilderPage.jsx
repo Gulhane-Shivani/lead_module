@@ -32,7 +32,8 @@ export default function FormBuilderPage() {
 
   React.useEffect(() => {
     if (forms && forms.length > 0 && selectedFormId === null) {
-      setSelectedFormId(forms[0].id);
+      const activeForm = forms.find(f => f.name === "Active Intake Form");
+      setSelectedFormId(activeForm ? activeForm.id : forms[0].id);
     }
   }, [forms, selectedFormId]);
 
@@ -135,7 +136,7 @@ export default function FormBuilderPage() {
               onChange={(e) => setSelectedFormId(Number(e.target.value))}
               className="px-3 py-1.5 text-sm font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 shadow-sm"
             >
-              {forms.map(f => (
+              {forms.filter(f => f.name === "Active Intake Form").map(f => (
                 <option key={f.id} value={f.id}>{f.name}</option>
               ))}
             </select>

@@ -19,7 +19,8 @@ export default function AddEditLeadPage() {
       if (isEditMode && leadToEdit?.form_id) {
         setSelectedFormId(leadToEdit.form_id);
       } else {
-        setSelectedFormId(forms[0].id);
+        const activeForm = forms.find(f => f.name === "Active Intake Form");
+        setSelectedFormId(activeForm ? activeForm.id : forms[0].id);
       }
     }
   }, [forms, selectedFormId, isEditMode, leadToEdit]);
@@ -27,7 +28,9 @@ export default function AddEditLeadPage() {
   const activeFields = React.useMemo(() => {
     if (!forms || forms.length === 0) return formFields;
     const form = forms.find(f => f.id === selectedFormId);
-    return form ? form.fields : forms[0].fields;
+    if (form) return form.fields;
+    const activeForm = forms.find(f => f.name === "Active Intake Form");
+    return activeForm ? activeForm.fields : forms[0].fields;
   }, [forms, selectedFormId, formFields]);
 
   // Render error state if edit ID specified but lead not found
@@ -142,7 +145,7 @@ export default function AddEditLeadPage() {
               onChange={(e) => setSelectedFormId(Number(e.target.value))}
               className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
             >
-              {forms.map(f => (
+              {forms.filter(f => f.name === "Active Intake Form").map(f => (
                 <option key={f.id} value={f.id}>{f.name}</option>
               ))}
             </select>

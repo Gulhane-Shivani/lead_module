@@ -20,7 +20,12 @@ import {
 } from 'lucide-react';
 
 export default function LeadListPage() {
-  const { leads, deleteLead } = useApp();
+  const { leads, deleteLead, forms } = useApp();
+
+  const isEditable = (lead) => {
+    const leadForm = (forms || []).find(f => f.id === lead.form_id);
+    return leadForm?.name === "Active Intake Form";
+  };
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -316,13 +321,15 @@ export default function LeadListPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </Link>
-                          <Link
-                            to={`/leads/edit/${lead.id}`}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-purple-600 dark:text-slate-400 dark:hover:text-purple-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
-                            title="Edit Lead Info"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </Link>
+                          {isEditable(lead) && (
+                            <Link
+                              to={`/leads/edit/${lead.id}`}
+                              className="p-1.5 rounded-lg text-slate-500 hover:text-purple-600 dark:text-slate-400 dark:hover:text-purple-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+                              title="Edit Lead Info"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </Link>
+                          )}
                           <button
                             onClick={(e) => handleOpenDeleteModal(lead, e)}
                             className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
@@ -374,12 +381,14 @@ export default function LeadListPage() {
                     >
                       <Eye className="w-4 h-4" />
                     </Link>
-                    <Link
-                      to={`/leads/edit/${lead.id}`}
-                      className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-purple-600"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                    </Link>
+                    {isEditable(lead) && (
+                      <Link
+                        to={`/leads/edit/${lead.id}`}
+                        className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-purple-600"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </Link>
+                    )}
                     <button
                       onClick={(e) => handleOpenDeleteModal(lead, e)}
                       className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/10 text-rose-600 hover:text-rose-700"
