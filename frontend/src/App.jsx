@@ -6,11 +6,8 @@ import Toast from './components/Common/Toast';
 
 export default function App() {
   return (
-    <AppProvider>
-      <BrowserRouter>
-        <AppRoutes />
-        <Toast />
-      </BrowserRouter>
-    </AppProvider>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <AppRoutes />
+    </BrowserRouter>
   );
 }

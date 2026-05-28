@@ -233,7 +233,13 @@ export default function MainLayout() {
                         <Settings className="w-3.5 h-3.5" /> Account Settings
                       </button>
                       <div className="h-px bg-slate-100 dark:bg-slate-800 my-1 mx-2" />
-                      <button className="w-full px-3 py-2 text-xs text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 hover:bg-rose-50/30 dark:hover:bg-rose-950/10 rounded-xl flex items-center gap-2">
+                      <button 
+                        onClick={() => {
+                          localStorage.removeItem('edulead_token');
+                          navigate('/login');
+                        }}
+                        className="w-full px-3 py-2 text-xs text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 hover:bg-rose-50/30 dark:hover:bg-rose-950/10 rounded-xl flex items-center gap-2"
+                      >
                         <LogOut className="w-3.5 h-3.5" /> Log Out
                       </button>
                     </div>

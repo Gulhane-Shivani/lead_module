@@ -7,10 +7,28 @@ import { ArrowLeft, UserPlus, ClipboardEdit } from 'lucide-react';
 export default function AddEditLeadPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { leads, formFields, addLead, updateLead } = useApp();
+  const { leads, forms, formFields, counselors, addLead, updateLead } = useApp();
 
   const isEditMode = !!id;
-  const leadToEdit = isEditMode ? leads.find(l => l.id === id) : null;
+  const leadToEdit = isEditMode ? leads.find(l => String(l.id) === id) : null;
+
+  const [selectedFormId, setSelectedFormId] = React.useState(null);
+
+  React.useEffect(() => {
+    if (forms && forms.length > 0 && selectedFormId === null) {
+      if (isEditMode && leadToEdit?.form_id) {
+        setSelectedFormId(leadToEdit.form_id);
+      } else {
+        setSelectedFormId(forms[0].id);
+      }
+    }
+  }, [forms, selectedFormId, isEditMode, leadToEdit]);
+
+  const activeFields = React.useMemo(() => {
+    if (!forms || forms.length === 0) return formFields;
+    const form = forms.find(f => f.id === selectedFormId);
+    return form ? form.fields : forms[0].fields;
+  }, [forms, selectedFormId, formFields]);
 
   // Render error state if edit ID specified but lead not found
   if (isEditMode && !leadToEdit) {
@@ -27,67 +45,70 @@ export default function AddEditLeadPage() {
 
   // Prep initial form values
   const getInitialValues = () => {
-    if (!isEditMode) return {
-      name: '',
-      email: '',
-      phone: '',
-      course: '',
-      source: '',
-      counselor: '',
-      status: 'New',
-      notes: ''
+    if (!isEditMode) return {};
+
+    const values = {
+      // Map core fields if they exist in leadToEdit
+      ...activeFields.reduce((acc, field) => {
+        if (field.label === "Student Full Name") acc[field.id] = leadToEdit.full_name;
+        else if (field.label === "Email Address") acc[field.id] = leadToEdit.email;
+        else if (field.label === "Phone Number") acc[field.id] = leadToEdit.phone;
+        else if (field.label === "Status") acc[field.id] = leadToEdit.status;
+        return acc;
+      }, {})
     };
 
-    // Combine standard fields and customFields responses for hook-form
-    return {
-      f_name: leadToEdit.name,
-      f_email: leadToEdit.email,
-      f_phone: leadToEdit.phone,
-      f_course: leadToEdit.course,
-      f_source: leadToEdit.source,
-      f_counselor: leadToEdit.counselor,
-      f_status: leadToEdit.status,
-      f_notes: leadToEdit.notes,
-      ...leadToEdit.customFields // Load custom fields inputs
-    };
+    // Map dynamic field values
+    leadToEdit.field_values.forEach(fv => {
+      values[fv.field_id] = fv.value;
+    });
+
+    return values;
   };
 
-  const handleFormSubmit = (data) => {
-    // Map values back to lead schema
-    // 1. Extract core defaults
-    const coreFields = {
-      name: data.f_name,
-      email: data.f_email,
-      phone: data.f_phone,
-      course: data.f_course,
-      source: data.f_source,
-      counselor: data.f_counselor,
-      status: data.f_status,
-      notes: data.f_notes
+  const handleFormSubmit = async (data) => {
+    // 1. Identify core fields by label or is_core
+    const coreData = {
+      full_name: 'Unknown Lead',
+      email: null,
+      phone: null,
+      status: 'New',
+      form_id: selectedFormId || (forms && forms[0]?.id) || 1,
+      dynamic_fields: []
     };
 
-    // 2. Anything else is a custom field response
-    const defaultFieldIds = ['f_name', 'f_email', 'f_phone', 'f_course', 'f_source', 'f_counselor', 'f_status', 'f_notes'];
-    const customFields = {};
-    Object.keys(data).forEach((key) => {
-      if (!defaultFieldIds.includes(key)) {
-        customFields[key] = data[key];
+    activeFields.forEach(field => {
+      const val = data[String(field.id)];
+      if (field.label === "Student Full Name" && val) coreData.full_name = val;
+      else if (field.label === "Email Address") coreData.email = val || null;
+      else if (field.label === "Phone Number") coreData.phone = val || null;
+      else if (field.label === "Status") coreData.status = val || 'New';
+      else if (field.label === "Assigned Counselor") {
+        coreData.counselor_id = val ? Number(val) : null;
+      } else {
+        // Dynamic field
+        if (val !== undefined && val !== null && val !== '') {
+          coreData.dynamic_fields.push({
+            field_id: field.id,
+            value: String(val)
+          });
+        }
       }
     });
 
-    if (isEditMode) {
-      updateLead({
-        ...leadToEdit,
-        ...coreFields,
-        customFields
-      });
-      navigate(`/leads/${leadToEdit.id}`);
-    } else {
-      const created = addLead({
-        ...coreFields,
-        customFields
-      });
-      navigate('/leads');
+    try {
+      if (isEditMode) {
+        await updateLead({
+          id: leadToEdit.id,
+          ...coreData
+        });
+        navigate(`/leads/${leadToEdit.id}`);
+      } else {
+        await addLead(coreData);
+        navigate('/leads');
+      }
+    } catch (error) {
+      console.error('Failed to save lead:', error);
     }
   };
 
@@ -110,18 +131,31 @@ export default function AddEditLeadPage() {
         </div>
         <div>
           <h1 className="text-lg font-black text-slate-800 dark:text-slate-100">
-            {isEditMode ? `Modify Details: ${leadToEdit.name}` : 'Register New Student Lead'}
+            {isEditMode ? `Modify Details: ${leadToEdit.full_name || 'Unknown Lead'}` : 'Register New Student Lead'}
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-slate-400 mt-0.5 mb-3">
             {isEditMode ? 'Make adjustments to lead status or custom fields answers below.' : 'Populate details to assign counselor and course preferences.'}
           </p>
+          {!isEditMode && forms && forms.length > 0 && (
+            <select 
+              value={selectedFormId || ''}
+              onChange={(e) => setSelectedFormId(Number(e.target.value))}
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+            >
+              {forms.map(f => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
       {/* Form Container */}
       <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200/50 dark:border-slate-800/40">
         <DynamicFormRenderer
-          fields={formFields}
+          key={selectedFormId}
+          fields={activeFields}
+          counselors={counselors}
           defaultValues={getInitialValues()}
           onSubmit={handleFormSubmit}
           buttonText={isEditMode ? "Save Changes" : "Create Lead"}

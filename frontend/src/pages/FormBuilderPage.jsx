@@ -23,11 +23,25 @@ import {
 } from 'lucide-react';
 
 export default function FormBuilderPage() {
-  const { formFields, saveFormTemplate } = useApp();
+  const { forms, saveFormTemplate } = useApp();
   
   // Local state for builder drafts
-  const [fields, setFields] = useState([...formFields]);
+  const [selectedFormId, setSelectedFormId] = useState(null);
+  const [fields, setFields] = useState([]);
   const [activeTab, setActiveTab] = useState('design'); // 'design' | 'preview'
+
+  React.useEffect(() => {
+    if (forms && forms.length > 0 && selectedFormId === null) {
+      setSelectedFormId(forms[0].id);
+    }
+  }, [forms, selectedFormId]);
+
+  React.useEffect(() => {
+    if (selectedFormId !== null && forms) {
+      const form = forms.find(f => f.id === selectedFormId);
+      if (form && form.fields) setFields([...form.fields]);
+    }
+  }, [selectedFormId, forms]);
 
   // Standard core field IDs (should not be deleted)
   const defaultFieldIds = ['f_name', 'f_email', 'f_phone', 'f_course', 'f_source', 'f_counselor', 'f_status', 'f_notes'];
@@ -112,9 +126,20 @@ export default function FormBuilderPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">Inquiry Form Builder</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">
+          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1 mb-3">
             Customize layout, validations, and sections for student intake forms.
           </p>
+          {forms && forms.length > 0 && (
+            <select 
+              value={selectedFormId || ''}
+              onChange={(e) => setSelectedFormId(Number(e.target.value))}
+              className="px-3 py-1.5 text-sm font-semibold rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 shadow-sm"
+            >
+              {forms.map(f => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </select>
+          )}
         </div>
         
         <div className="flex items-center gap-2">
@@ -186,7 +211,7 @@ export default function FormBuilderPage() {
             <div className="glass-panel p-6 rounded-3xl border border-slate-200/50 dark:border-slate-800/40 space-y-5">
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/50 pb-3">
                 <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                  Active Intake Fields Canvas
+                  {forms && forms.find(f => f.id === selectedFormId)?.name || 'Active Intake Fields Canvas'}
                 </h3>
                 <span className="text-[10px] text-slate-400">Total Fields: {fields.length}</span>
               </div>

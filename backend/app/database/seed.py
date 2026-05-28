@@ -44,34 +44,104 @@ def seed_data():
 
         db.commit()
 
-        # Create a default Form
-        form = db.query(LeadForm).filter(LeadForm.name == "Student Admission Form").first()
+        # Create the "Active Intake Form"
+        form = db.query(LeadForm).filter(LeadForm.name == "Active Intake Form").first()
         if not form:
             form = LeadForm(
-                name="Student Admission Form",
-                description="General admission form for new students"
+                name="Active Intake Form",
+                description="Comprehensive student intake form with sections and validation"
             )
             db.add(form)
             db.flush()
 
-            fields = [
-                {"label": "Course of Interest", "field_type": FieldType.TEXT, "required": True, "order": 1},
-                {"label": "Source", "field_type": FieldType.TEXT, "required": False, "order": 2},
+            fields_data = [
+                {
+                    "label": "Student Full Name",
+                    "field_type": FieldType.TEXT,
+                    "required": True,
+                    "placeholder": "Enter student's full name",
+                    "section": "Basic Info",
+                    "validation": {"minLength": 2},
+                    "is_core": True,
+                    "order": 1
+                },
+                {
+                    "label": "Email Address",
+                    "field_type": FieldType.EMAIL,
+                    "required": True,
+                    "placeholder": "studentname@example.com",
+                    "section": "Basic Info",
+                    "is_core": True,
+                    "order": 2
+                },
+                {
+                    "label": "Phone Number",
+                    "field_type": FieldType.NUMBER,
+                    "required": True,
+                    "placeholder": "e.g., 9876543210",
+                    "section": "Basic Info",
+                    "is_core": True,
+                    "order": 3
+                },
+                {
+                    "label": "Course of Interest",
+                    "field_type": FieldType.DROPDOWN,
+                    "required": True,
+                    "placeholder": "Select a course",
+                    "section": "Academic Info",
+                    "options": ["B.Tech Computer Science", "MBA", "M.Tech Data Science", "B.Sc Psychology", "Digital Marketing"],
+                    "is_core": True,
+                    "order": 4
+                },
+                {
+                    "label": "Source",
+                    "field_type": FieldType.DROPDOWN,
+                    "required": False,
+                    "placeholder": "How did you hear about us?",
+                    "section": "Marketing Info",
+                    "options": ["Google Search", "LinkedIn", "Facebook Ads", "Instagram", "Referral", "Educational Fair"],
+                    "is_core": True,
+                    "order": 5
+                },
+                {
+                    "label": "Assigned Counselor",
+                    "field_type": FieldType.TEXT,
+                    "required": False,
+                    "section": "Administration",
+                    "is_core": True,
+                    "order": 6
+                },
+                {
+                    "label": "Status",
+                    "field_type": FieldType.TEXT,
+                    "required": False,
+                    "section": "Administration",
+                    "is_core": True,
+                    "order": 7
+                },
+                {
+                    "label": "Internal Notes",
+                    "field_type": FieldType.TEXTAREA,
+                    "required": False,
+                    "section": "Administration",
+                    "is_core": True,
+                    "order": 8
+                }
             ]
 
             field_map = {}
-            for f_data in fields:
+            for f_data in fields_data:
                 field = LeadField(form_id=form.id, **f_data)
                 db.add(field)
                 db.flush()
                 field_map[f_data["label"]] = field
         else:
-            # Map existing fields
             field_map = {field.label: field for field in form.fields}
 
         db.commit()
 
-        # Seed Leads
+        # Update existing "Student Admission Form" if it exists, or just use it as a reference
+        # For simplicity, we'll keep using the first form found for leads or update the leads to use the new form
         leads_to_seed = [
             {
                 "full_name": "Aarav Mehta",

@@ -63,21 +63,27 @@ export default function LeadListPage() {
   }, [statusFilter, courseFilter, counselorFilter, sourceFilter]);
 
   // Collect unique values for filter dropdowns
-  const uniqueCourses = [...new Set(leads.map(l => l.course).filter(Boolean))];
-  const uniqueCounselors = [...new Set(leads.map(l => l.counselor).filter(Boolean))];
-  const uniqueSources = [...new Set(leads.map(l => l.source).filter(Boolean))];
+  const uniqueCourses = [...new Set(leads.flatMap(l => (l.field_values || []).filter(fv => fv.field?.label === "Course of Interest").map(fv => fv.value)))];
+  const uniqueCounselors = [...new Set(leads.map(l => l.counselor?.full_name).filter(Boolean))];
+  const uniqueSources = [...new Set(leads.flatMap(l => (l.field_values || []).filter(fv => fv.field?.label === "Source").map(fv => fv.value)))];
+
+  // Helper to get dynamic field value
+  const getFieldValue = (lead, label) => {
+    const fv = (lead.field_values || []).find(v => v.field?.label === label);
+    return fv ? fv.value : 'N/A';
+  };
 
   // Filtering Logic
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = 
-      lead.name.toLowerCase().includes(search.toLowerCase()) ||
-      lead.email.toLowerCase().includes(search.toLowerCase()) ||
-      lead.phone.includes(search);
+      (lead.full_name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (lead.email || '').toLowerCase().includes(search.toLowerCase()) ||
+      (lead.phone || '').includes(search);
       
     const matchesStatus = !statusFilter || lead.status === statusFilter;
-    const matchesCourse = !courseFilter || lead.course === courseFilter;
-    const matchesCounselor = !counselorFilter || lead.counselor === counselorFilter;
-    const matchesSource = !sourceFilter || lead.source === sourceFilter;
+    const matchesCourse = !courseFilter || getFieldValue(lead, "Course of Interest") === courseFilter;
+    const matchesCounselor = !counselorFilter || lead.counselor?.full_name === counselorFilter;
+    const matchesSource = !sourceFilter || getFieldValue(lead, "Source") === sourceFilter;
 
     return matchesSearch && matchesStatus && matchesCourse && matchesCounselor && matchesSource;
   });
@@ -271,7 +277,7 @@ export default function LeadListPage() {
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
                           <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                            {lead.name}
+                            {lead.full_name}
                           </span>
                           <span className="text-[10px] text-slate-400 mt-0.5">
                             {lead.email}
@@ -280,22 +286,22 @@ export default function LeadListPage() {
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                          {lead.course}
+                          {getFieldValue(lead, "Course of Interest")}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                          {lead.counselor}
+                          {lead.counselor?.full_name || 'Unassigned'}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-[11px] text-slate-500 dark:text-slate-500">
-                          {lead.source || 'N/A'}
+                          {getFieldValue(lead, "Source")}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-[11px] text-slate-500 dark:text-slate-500">
-                          {lead.dateCreated}
+                          {new Date(lead.created_at).toLocaleDateString()}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -342,7 +348,7 @@ export default function LeadListPage() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h3 className="text-xs font-bold text-slate-800 dark:text-slate-100">{lead.name}</h3>
+                    <h3 className="text-xs font-bold text-slate-800 dark:text-slate-100">{lead.full_name}</h3>
                     <p className="text-[10px] text-slate-400 mt-0.5">{lead.email}</p>
                   </div>
                   <StatusBadge status={lead.status} />
@@ -351,16 +357,16 @@ export default function LeadListPage() {
                 <div className="grid grid-cols-2 gap-2 text-[10px] py-1 border-t border-b border-slate-100 dark:border-slate-800/50">
                   <div>
                     <span className="text-slate-400 block uppercase font-bold tracking-wider">Course</span>
-                    <span className="text-slate-700 dark:text-slate-300 font-semibold">{lead.course}</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-semibold">{getFieldValue(lead, "Course of Interest")}</span>
                   </div>
                   <div>
                     <span className="text-slate-400 block uppercase font-bold tracking-wider">Counselor</span>
-                    <span className="text-slate-700 dark:text-slate-300 font-semibold">{lead.counselor}</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-semibold">{lead.counselor?.full_name || 'Unassigned'}</span>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-[9px] text-slate-400 font-medium">Created: {lead.dateCreated}</span>
+                  <span className="text-[9px] text-slate-400 font-medium">Created: {new Date(lead.created_at).toLocaleDateString()}</span>
                   <div className="flex items-center gap-2">
                     <Link
                       to={`/leads/${lead.id}`}
