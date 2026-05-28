@@ -1,4 +1,4 @@
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 from pydantic import BaseModel
 from app.models.lead import FieldType
 
@@ -6,6 +6,10 @@ class LeadFieldBase(BaseModel):
     label: str
     field_type: FieldType
     required: bool = False
+    placeholder: Optional[str] = None
+    section: Optional[str] = "General Details"
+    validation: Optional[Dict[str, Any]] = None
+    is_core: Optional[bool] = False
     options: Optional[List[str]] = None
     order: int = 0
 
@@ -16,6 +20,10 @@ class LeadFieldUpdate(BaseModel):
     label: Optional[str] = None
     field_type: Optional[FieldType] = None
     required: Optional[bool] = None
+    placeholder: Optional[str] = None
+    section: Optional[str] = None
+    validation: Optional[Dict[str, Any]] = None
+    is_core: Optional[bool] = None
     options: Optional[List[str]] = None
     order: Optional[int] = None
 
