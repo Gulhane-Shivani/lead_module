@@ -2,6 +2,7 @@ from typing import List, Optional, Dict
 from pydantic import BaseModel, field_validator
 from datetime import datetime
 from app.models.lead import LeadStatus
+from app.schemas.form import LeadField
 
 class LeadFieldValueBase(BaseModel):
     field_id: int
@@ -13,6 +14,7 @@ class LeadFieldValueCreate(LeadFieldValueBase):
 class LeadFieldValue(LeadFieldValueBase):
     id: int
     lead_id: int
+    field: Optional[LeadField] = None
 
     class Config:
         from_attributes = True
@@ -66,11 +68,14 @@ class LeadUpdate(BaseModel):
                     return status
             return None
 
+from app.schemas.user import User
+
 class Lead(LeadBase):
     id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
     field_values: List[LeadFieldValue] = []
+    counselor: Optional[User] = None
 
     class Config:
         from_attributes = True

@@ -65,7 +65,8 @@ export default function FormBuilderPage() {
 
   // Delete field helper
   const handleDeleteField = (id) => {
-    if (defaultFieldIds.includes(id)) return; // Protection
+    const field = fields.find(f => f.id === id);
+    if (defaultFieldIds.includes(id) || (field && field.is_core)) return; // Protection
     setFields(fields.filter(f => f.id !== id));
   };
 
@@ -106,7 +107,7 @@ export default function FormBuilderPage() {
   };
 
   const handleSaveLayout = () => {
-    saveFormTemplate(fields);
+    saveFormTemplate(selectedFormId, fields);
   };
 
   const toolboxItems = [
@@ -219,7 +220,7 @@ export default function FormBuilderPage() {
 
               <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
                 {fields.map((field, idx) => {
-                  const isSystemDefault = defaultFieldIds.includes(field.id);
+                  const isSystemDefault = defaultFieldIds.includes(field.id) || field.is_core;
                   return (
                     <div 
                       key={field.id}

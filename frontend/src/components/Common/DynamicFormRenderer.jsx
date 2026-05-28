@@ -9,7 +9,12 @@ export default function DynamicFormRenderer({ fields, defaultValues, onSubmit, b
   const renderField = (field) => {
     const commonClasses = "w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/30";
     
-    switch (field.field_type) {
+    const fType = field.field_type || field.type;
+    let htmlType = fType;
+    if (htmlType === 'date picker') htmlType = 'date';
+    if (htmlType === 'file upload') htmlType = 'file';
+
+    switch (fType) {
       case 'dropdown':
         return (
           <select {...register(String(field.id), { required: field.required })} className={commonClasses}>
@@ -33,7 +38,7 @@ export default function DynamicFormRenderer({ fields, defaultValues, onSubmit, b
       default:
         return (
           <input 
-            type={field.field_type} 
+            type={htmlType} 
             {...register(String(field.id), { required: field.required })} 
             placeholder={field.placeholder} 
             className={commonClasses} 

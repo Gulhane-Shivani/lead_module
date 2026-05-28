@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.api import deps
 from app.models.user import User
-from app.schemas.form import LeadForm, LeadFormCreate, LeadFormUpdate, LeadField, LeadFieldCreate, LeadFieldUpdate
+from app.schemas.form import LeadForm, LeadFormCreate, LeadFormUpdate, LeadField, LeadFieldCreate, LeadFieldUpdate, FormFieldsSync
 from app.services import form_service
 
 router = APIRouter()
@@ -59,3 +59,19 @@ def delete_field(
     if not form_service.delete_field(db, field_id=field_id):
         raise HTTPException(status_code=404, detail="Field not found")
     return None
+
+@router.put("/{form_id}/fields", response_model=LeadForm)
+def sync_form_fields(
+    *,
+    db: Session = Depends(deps.get_db),
+    form_id: int,
+    sync_in: FormFieldsSync,
+    current_user: User = Depends(deps.get_current_active_admin)
+):
+    form = form_service.get_form(db, form_id=form_id)
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    
+    form_service.sync_fields(db, form_id=form_id, sync_data=sync_in)
+    db.refresh(form)
+    return form

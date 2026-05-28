@@ -148,13 +148,44 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const saveFormTemplate = async (fields) => {
-    // In this backend, we update individual fields or the form
-    // For simplicity in this demo, we'll assume we're updating form 1
+  const saveFormTemplate = async (formId, fields) => {
     try {
-      // This is a simplified version; real implementation would loop or have a batch endpoint
-      showToast('Form structure updated (API simulated)', 'success');
+      const payload = {
+        fields: fields.map((f, idx) => ({
+          id: typeof f.id === 'string' && f.id.startsWith('custom_') ? null : f.id,
+          label: f.label,
+          field_type: f.field_type || f.type,
+          required: !!f.required,
+          placeholder: f.placeholder || "",
+          section: f.section || "General Details",
+          validation: f.validation || {},
+          is_core: !!f.is_core,
+          options: f.options || [],
+          order: idx + 1
+        }))
+      };
+
+      const response = await api.put(`/forms/${formId}/fields`, payload);
+
+      // Update local state forms
+      const updatedForm = {
+        ...response.data,
+        fields: response.data.fields.map(field => ({
+          ...field,
+          type: field.field_type || field.type
+        }))
+      };
+
+      setForms(prev => prev.map(f => f.id === formId ? updatedForm : f));
+
+      // Update formFields if it is the active form
+      if (forms.length > 0 && forms[0].id === formId) {
+        setFormFields(updatedForm.fields);
+      }
+
+      showToast('Form structure updated successfully!', 'success');
     } catch (error) {
+      console.error('Failed to save form template:', error);
       showToast('Failed to save form template', 'error');
     }
   };

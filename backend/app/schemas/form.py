@@ -53,3 +53,18 @@ class LeadForm(LeadFormBase):
 
     class Config:
         from_attributes = True
+
+class FieldSyncItem(BaseModel):
+    id: Optional[Any] = None
+    label: str
+    field_type: str
+    required: bool = False
+    placeholder: Optional[str] = None
+    section: Optional[str] = "General Details"
+    validation: Optional[Dict[str, Any]] = None
+    is_core: Optional[bool] = False
+    options: Optional[List[str]] = None
+    order: int = 0
+
+class FormFieldsSync(BaseModel):
+    fields: List[FieldSyncItem]
