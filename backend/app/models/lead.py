@@ -63,6 +63,10 @@ class LeadField(Base):
     label = Column(String)
     field_type = Column(Enum(FieldType))
     required = Column(Boolean, default=False)
+    placeholder = Column(String, nullable=True)
+    section = Column(String, default="General Details")
+    validation = Column(JSON, nullable=True)
+    is_core = Column(Boolean, default=False)
     options = Column(JSON, nullable=True)  # For dropdown, radio, checkbox
     order = Column(Integer, default=0)
 
