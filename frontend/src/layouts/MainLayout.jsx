@@ -6,10 +6,7 @@ import {
   GraduationCap, 
   Search, 
   Bell, 
-  ChevronDown, 
-  User, 
   LogOut, 
-  Settings, 
   Check, 
   TrendingUp, 
   FileText, 
@@ -44,9 +41,7 @@ export default function MainLayout() {
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifMenu, setShowNotifMenu] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const notifRef = useRef(null);
-  const profileRef = useRef(null);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -55,9 +50,6 @@ export default function MainLayout() {
     function handleClickOutside(event) {
       if (notifRef.current && !notifRef.current.contains(event.target)) {
         setShowNotifMenu(false);
-      }
-      if (profileRef.current && !profileRef.current.contains(event.target)) {
-        setShowProfileMenu(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -210,83 +202,37 @@ export default function MainLayout() {
               </AnimatePresence>
             </div>
 
-            {/* Logout Button - Always Visible */}
-            {/* <button
+            {/* Flat Profile Info (no dropdown) */}
+            <div className="flex items-center gap-2">
+              {/* Avatar */}
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white font-bold text-xs flex items-center justify-center shadow-md shadow-purple-500/10 shrink-0">
+                {userInitials}
+              </div>
+              {/* Name + Role + Badge */}
+              <div className="hidden sm:block text-left">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-tight">{displayName}</span>
+                  {/* {isAdmin && (
+                    <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-md shadow-sm">
+                      Admin
+                    </span>
+                  )} */}
+                </div>
+                <span className="block text-[10px] text-slate-400 font-semibold">{userRole}</span>
+              </div>
+            </div>
+
+            {/* Logout Button — always visible, rightmost */}
+            <button
               onClick={() => {
                 logout();
                 navigate('/login');
               }}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-rose-600 hover:text-white dark:text-rose-400 bg-rose-50 hover:bg-rose-600 dark:bg-rose-950/30 dark:hover:bg-rose-600 dark:hover:text-white border border-rose-200/60 dark:border-rose-900/40 hover:border-rose-600 rounded-xl transition-all duration-200 shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-rose-600 hover:text-white dark:text-rose-400 bg-rose-50 hover:bg-rose-600 dark:bg-rose-950/30 dark:hover:bg-rose-600 dark:hover:text-white border border-rose-200/60 dark:border-rose-900/40 hover:border-rose-600 rounded-xl transition-all duration-200 shadow-sm"
             >
               <LogOut className="w-3.5 h-3.5" />
-              
-            </button> */}
-
-            {/* Profile Dropdown */}
-            <div className="relative" ref={profileRef}>
-              <button
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="flex items-center gap-2 group focus:outline-none"
-              >
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white font-bold text-xs flex items-center justify-center shadow-md shadow-purple-500/10 group-hover:scale-102 transition-transform duration-200">
-                  {userInitials}
-                </div>
-                <div className="hidden sm:block text-left">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-tight">{displayName}</span>
-                    {isAdmin && (
-                      <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-md shadow-sm">
-                        Admin
-                      </span>
-                    )}
-                  </div>
-                  <span className="block text-[10px] text-slate-400 font-semibold">{userRole}</span>
-                </div>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-400 transition-colors duration-150" />
-              </button>
-
-              <AnimatePresence>
-                {showProfileMenu && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-0 mt-2.5 w-52 glass-panel-heavy rounded-2xl shadow-xl overflow-hidden z-50 text-left border border-slate-200/60 dark:border-slate-800/60"
-                  >
-                    <div className="p-3 bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 border-b border-slate-100 dark:border-slate-800/50">
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{displayName}</span>
-                        {isAdmin && (
-                          <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-md">
-                            Admin
-                          </span>
-                        )}
-                      </div>
-                      <span className="block text-[10px] text-slate-400 truncate">{userEmail}</span>
-                    </div>
-                    <div className="p-1">
-                      <button className="w-full px-3 py-2 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-800/30 rounded-xl flex items-center gap-2">
-                        <User className="w-3.5 h-3.5" /> View Profile
-                      </button>
-                      <button className="w-full px-3 py-2 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-800/30 rounded-xl flex items-center gap-2">
-                        <Settings className="w-3.5 h-3.5" /> Account Settings
-                      </button>
-                      <div className="h-px bg-slate-100 dark:bg-slate-800 my-1 mx-2" />
-                      <button 
-                        onClick={() => {
-                          logout();
-                          navigate('/login');
-                        }}
-                        className="w-full px-3 py-2 text-xs text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 hover:bg-rose-50/30 dark:hover:bg-rose-950/10 rounded-xl flex items-center gap-2"
-                      >
-                        <LogOut className="w-3.5 h-3.5" /> Log Out
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+              <span className="hidden sm:inline"></span>
+            </button>
 
           </div>
         </div>
