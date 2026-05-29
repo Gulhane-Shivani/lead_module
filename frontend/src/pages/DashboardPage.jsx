@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { INITIAL_COUNSELORS, ANALYTICS_TREND_DATA, ANALYTICS_SOURCE_DATA } from '../data/mockData';
 import StatusBadge from '../components/Common/StatusBadge';
 import { Link } from 'react-router-dom';
@@ -34,7 +35,13 @@ import {
 } from 'recharts';
 
 export default function DashboardPage() {
-  const { leads, followups } = useApp();
+  const { leads: rawLeads, followups: rawFollowups } = useApp();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+
+  // Filter leads and followups dynamically based on user role
+  const leads = isAdmin ? rawLeads : rawLeads.filter(l => l.counselor_id === user?.id);
+  const followups = isAdmin ? rawFollowups : rawFollowups.filter(f => f.counselor_id === user?.id || rawLeads.some(l => l.id === f.lead_id && l.counselor_id === user?.id));
 
   // 1. Calculate live KPI metrics
   const totalLeads = leads.length;
@@ -121,7 +128,7 @@ export default function DashboardPage() {
 
   // Counselor active workload compilation
   const counselorData = INITIAL_COUNSELORS.map(cn => {
-    const counselorLeads = leads.filter(l => l.counselor === cn.name);
+    const counselorLeads = leads.filter(l => l.counselor?.full_name === cn.name || l.counselor === cn.name);
     const counselorConfirmed = counselorLeads.filter(l => l.status === 'Admission Confirmed').length;
     return {
       name: cn.name.split(' ')[0], // first name for chart label

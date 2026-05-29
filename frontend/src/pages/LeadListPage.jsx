@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { exportToCSV } from '../utils/exportCSV';
 import StatusBadge from '../components/Common/StatusBadge';
 import Modal from '../components/Common/Modal';
@@ -20,7 +21,12 @@ import {
 } from 'lucide-react';
 
 export default function LeadListPage() {
-  const { leads, deleteLead, forms } = useApp();
+  const { leads: rawLeads, deleteLead, forms } = useApp();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+
+  // Filter leads array: If counselor, show only their assigned leads
+  const leads = isAdmin ? rawLeads : rawLeads.filter(l => l.counselor_id === user?.id);
 
   const isEditable = (lead) => {
     const leadForm = (forms || []).find(f => f.id === lead.form_id);
@@ -160,7 +166,7 @@ export default function LeadListPage() {
       <div className="glass-panel p-5 rounded-3xl space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3.5">
           {/* Text Search */}
-          <div className="relative md:col-span-2">
+          <div className={`relative ${isAdmin ? 'md:col-span-2' : 'md:col-span-3'}`}>
             <input
               type="text"
               placeholder="Search by student name, email, phone..."
@@ -206,17 +212,19 @@ export default function LeadListPage() {
             ))}
           </select>
 
-          {/* Counselor Filter */}
-          <select
-            value={counselorFilter}
-            onChange={(e) => setCounselorFilter(e.target.value)}
-            className="w-full px-3 py-2.5 text-xs rounded-xl bg-white/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/80 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:text-slate-300"
-          >
-            <option value="">All Counselors</option>
-            {uniqueCounselors.map((c, i) => (
-              <option key={i} value={c}>{c}</option>
-            ))}
-          </select>
+          {/* Counselor Filter (Admin Only) */}
+          {isAdmin && (
+            <select
+              value={counselorFilter}
+              onChange={(e) => setCounselorFilter(e.target.value)}
+              className="w-full px-3 py-2.5 text-xs rounded-xl bg-white/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/80 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:text-slate-300"
+            >
+              <option value="">All Counselors</option>
+              {uniqueCounselors.map((c, i) => (
+                <option key={i} value={c}>{c}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* Bottom Panel filter actions */}
