@@ -1,6 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { INITIAL_COUNSELORS, ANALYTICS_TREND_DATA, ANALYTICS_SOURCE_DATA } from '../data/mockData';
+import { useAuth } from '../context/AuthContext';
 import { 
   BarChart, 
   Bar, 
@@ -9,77 +9,131 @@ import {
   CartesianGrid, 
   Tooltip, 
   Legend, 
-  ResponsiveContainer, 
-  LineChart, 
-  Line,
+  ResponsiveContainer,
   Cell
 } from 'recharts';
 import { 
   TrendingUp, 
   Users, 
   Award, 
-  Filter, 
-  Share2, 
   Download,
-  Calendar,
-  FileSpreadsheet
 } from 'lucide-react';
 import exportToCSV from '../utils/exportCSV';
 
-export default function AnalyticsPage() {
-  const { leads } = useApp();
+// Helper: extract a field_value from a lead by field label
+const getFieldValue = (lead, label) => {
+  const fv = (lead.field_values || []).find(
+    v => (v.field?.label || '').toLowerCase().trim() === label.toLowerCase().trim()
+  );
+  return fv ? fv.value : null;
+};
 
-  // 1. Calculate funnel stages counts
-  const countByStatus = (statusName) => leads.filter(l => l.status === statusName).length;
-  
+export default function AnalyticsPage() {
+  const { leads: rawLeads, counselors } = useApp();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+
+  // Role-based lead filtering
+  const leads = isAdmin
+    ? rawLeads
+    : rawLeads.filter(l => l.counselor_id === user?.id);
+
+  // ─── 1. Conversion Funnel ──────────────────────────────────────────────────
   const funnelStages = [
-    { name: 'Total Inquiries', count: leads.length, color: 'bg-indigo-500' },
-    { name: 'Contacted Leads', count: leads.filter(l => ['Contacted', 'Interested', 'Follow-Up Pending', 'Admission Confirmed'].includes(l.status)).length, color: 'bg-purple-500' },
-    { name: 'Interested Leads', count: leads.filter(l => ['Interested', 'Admission Confirmed'].includes(l.status)).length, color: 'bg-cyan-500' },
-    { name: 'Admissions Closed', count: countByStatus('Admission Confirmed'), color: 'bg-emerald-500' }
+    {
+      name: 'Total Inquiries',
+      count: leads.length,
+      color: 'bg-indigo-500'
+    },
+    {
+      name: 'Contacted Leads',
+      count: leads.filter(l =>
+        ['Contacted', 'Interested', 'Follow-Up Pending', 'Admission Confirmed'].includes(l.status)
+      ).length,
+      color: 'bg-purple-500'
+    },
+    {
+      name: 'Interested Leads',
+      count: leads.filter(l =>
+        ['Interested', 'Admission Confirmed'].includes(l.status)
+      ).length,
+      color: 'bg-cyan-500'
+    },
+    {
+      name: 'Admissions Closed',
+      count: leads.filter(l => l.status === 'Admission Confirmed').length,
+      color: 'bg-emerald-500'
+    }
   ];
 
-  // Calculate funnel percentage from top
-  const funnelWithPct = funnelStages.map((stage, idx, arr) => {
-    const topCount = arr[0].count;
-    const pct = topCount > 0 ? Math.round((stage.count / topCount) * 100) : 0;
-    return { ...stage, pct };
-  });
+  const topCount = funnelStages[0].count || 1;
+  const funnelWithPct = funnelStages.map(stage => ({
+    ...stage,
+    pct: Math.round((stage.count / topCount) * 100)
+  }));
 
-  // 2. Counselor Rankings Compile
-  const counselorsPerformance = INITIAL_COUNSELORS.map(cn => {
-    const assignedLeads = leads.filter(l => l.counselor === cn.name);
-    const admissionsClosed = assignedLeads.filter(l => l.status === 'Admission Confirmed').length;
-    const conversionRate = assignedLeads.length > 0 ? Math.round((admissionsClosed / assignedLeads.length) * 100) : cn.conversionRate;
-    const targetAchieved = Math.round((admissionsClosed / 5) * 100); // 5 admissions is target
-    return {
-      ...cn,
-      activeLeads: assignedLeads.length || cn.activeLeads,
-      admissions: admissionsClosed || Math.round(cn.activeLeads * (cn.conversionRate / 100)),
-      conversionRate,
-      targetAchieved
-    };
-  }).sort((a,b) => b.admissions - a.admissions);
+  const conversionRate = funnelWithPct[3]?.pct || 0;
 
-  // 3. Lead Source compilation
+  // ─── 2. Lead Source Breakdown (from field_values) ──────────────────────────
   const sourceTotals = leads.reduce((acc, lead) => {
-    acc[lead.source || 'Google Search'] = (acc[lead.source || 'Google Search'] || 0) + 1;
+    const source = getFieldValue(lead, 'Source') || 'Unknown';
+    acc[source] = (acc[source] || 0) + 1;
     return acc;
   }, {});
 
-  const totalSourcesCount = Object.values(sourceTotals).reduce((a,b) => a+b, 0) || 1;
-  const sourcesBreakdown = Object.keys(sourceTotals).map(key => {
-    const count = sourceTotals[key];
-    const pct = Math.round((count / totalSourcesCount) * 100);
-    return { name: key, count, pct };
-  }).sort((a,b) => b.count - a.count);
+  const totalSourceCount = Object.values(sourceTotals).reduce((a, b) => a + b, 0) || 1;
+  const sourcesBreakdown = Object.entries(sourceTotals)
+    .map(([name, count]) => ({
+      name,
+      count,
+      pct: Math.round((count / totalSourceCount) * 100)
+    }))
+    .sort((a, b) => b.count - a.count);
 
+  // ─── 3. Counselor Performance Rankings (live data) ────────────────────────
+  // Only counselors (not admins) in the list
+  const counselorList = counselors.filter(c => c.role === 'counselor');
+
+  const counselorsPerformance = counselorList.map(c => {
+    // Match leads by counselor_id (FK on lead) or counselor object id
+    const assigned = leads.filter(l =>
+      l.counselor_id === c.id || l.counselor?.id === c.id
+    );
+    const admissions = assigned.filter(l => l.status === 'Admission Confirmed').length;
+    const convRate = assigned.length > 0
+      ? Math.round((admissions / assigned.length) * 100)
+      : 0;
+    const targetGoal = 5; // target admissions
+    const targetAchieved = Math.min(Math.round((admissions / targetGoal) * 100), 100);
+
+    return {
+      id: c.id,
+      name: c.full_name,
+      email: c.email,
+      activeLeads: assigned.length,
+      admissions,
+      conversionRate: convRate,
+      targetAchieved
+    };
+  }).sort((a, b) => b.admissions - a.admissions);
+
+  // ─── 4. Status Breakdown Bar Chart data ───────────────────────────────────
+  const statusGroups = [
+    { name: 'New', count: leads.filter(l => l.status === 'New').length, fill: '#6366f1' },
+    { name: 'Contacted', count: leads.filter(l => l.status === 'Contacted').length, fill: '#a855f7' },
+    { name: 'Interested', count: leads.filter(l => l.status === 'Interested').length, fill: '#06b6d4' },
+    { name: 'Follow-Up', count: leads.filter(l => l.status === 'Follow-Up Pending').length, fill: '#f59e0b' },
+    { name: 'Confirmed', count: leads.filter(l => l.status === 'Admission Confirmed').length, fill: '#10b981' },
+    { name: 'Rejected', count: leads.filter(l => l.status === 'Rejected').length, fill: '#f43f5e' },
+  ];
+
+  // ─── 5. Export ─────────────────────────────────────────────────────────────
   const handleExportCounselors = () => {
     const csvData = counselorsPerformance.map(c => ({
       'Counselor Name': c.name,
       'Email': c.email,
       'Active Leads': c.activeLeads,
-      'Admissions Closed': c.admissions,
+      'Admissions Confirmed': c.admissions,
       'Conversion Rate (%)': c.conversionRate,
       'Target Achieved (%)': c.targetAchieved
     }));
@@ -88,30 +142,54 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header Banner */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">Performance Analytics</h1>
+          <h1 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">
+            Performance Analytics
+          </h1>
           <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">
-            Deeper insights into admissions conversion funnels and counselor scorecards.
+            {isAdmin
+              ? 'Deeper insights into admissions conversion funnels and counselor scorecards.'
+              : 'Your personal lead conversion funnel and performance metrics.'}
           </p>
         </div>
-        <button
-          onClick={handleExportCounselors}
-          className="px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-xl flex items-center gap-2 transition-all shadow-sm"
-        >
-          <Download className="w-4 h-4" /> Export Report
-        </button>
+        {isAdmin && (
+          <button
+            onClick={handleExportCounselors}
+            className="px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-xl flex items-center gap-2 transition-all shadow-sm hover:border-indigo-500/40"
+          >
+            <Download className="w-4 h-4" /> Export Report
+          </button>
+        )}
       </div>
 
-      {/* Funnel and Sources row */}
+      {/* Summary KPI Strip */}
+      {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Leads', value: leads.length, color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-950/20', border: 'border-indigo-100 dark:border-indigo-900/30' },
+          { label: 'Interested', value: leads.filter(l => ['Interested', 'Admission Confirmed'].includes(l.status)).length, color: 'text-cyan-600', bg: 'bg-cyan-50 dark:bg-cyan-950/20', border: 'border-cyan-100 dark:border-cyan-900/30' },
+          { label: 'Admissions Confirmed', value: funnelStages[3].count, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-950/20', border: 'border-emerald-100 dark:border-emerald-900/30' },
+          { label: 'Conversion Rate', value: `${conversionRate}%`, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-950/20', border: 'border-purple-100 dark:border-purple-900/30' },
+        ].map((kpi, i) => (
+          <div key={i} className={`glass-panel p-4 rounded-2xl border ${kpi.border}`}>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">{kpi.label}</p>
+            <p className={`text-2xl font-extrabold ${kpi.color}`}>{kpi.value}</p>
+          </div>
+        ))}
+      </div> */}
+      {/* Funnel + Sources Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Conversion Funnel Widget */}
+
+        {/* Conversion Funnel */}
         <div className="lg:col-span-2 glass-panel p-6 rounded-3xl flex flex-col justify-between">
           <div>
-            <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-200">Admissions Conversion Funnel</h3>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Inquiry drop-off stages from registration to final admission</p>
+            <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-200">
+              Admissions Conversion Funnel
+            </h3>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+              Inquiry drop-off stages from registration to final admission
+            </p>
           </div>
 
           <div className="space-y-4 my-6">
@@ -119,13 +197,14 @@ export default function AnalyticsPage() {
               <div key={idx} className="space-y-1">
                 <div className="flex justify-between items-center text-xs font-bold">
                   <span className="text-slate-700 dark:text-slate-300">{stage.name}</span>
-                  <span className="text-slate-400 dark:text-slate-500">{stage.count} Students ({stage.pct}%)</span>
+                  <span className="text-slate-400 dark:text-slate-500">
+                    {stage.count} Students ({stage.pct}%)
+                  </span>
                 </div>
-                {/* Horizontal Funnel step block */}
-                <div className="w-full bg-slate-100 dark:bg-slate-900 h-8 rounded-xl overflow-hidden relative border border-slate-200/20 dark:border-slate-800/40">
-                  <div 
+                <div className="w-full bg-slate-100 dark:bg-slate-900 h-8 rounded-xl overflow-hidden border border-slate-200/20 dark:border-slate-800/40">
+                  <div
                     className={`h-full ${stage.color} opacity-85 transition-all duration-500`}
-                    style={{ width: `${Math.max(stage.pct, 5)}%` }}
+                    style={{ width: `${Math.max(stage.pct, stage.count > 0 ? 3 : 0)}%` }}
                   />
                 </div>
               </div>
@@ -133,99 +212,154 @@ export default function AnalyticsPage() {
           </div>
 
           <div className="text-[11px] text-slate-400 border-t border-slate-100 dark:border-slate-800/50 pt-3">
-            🎯 Funnel target standard conversion goal is <strong>15%</strong>. Currently operating at <strong>{funnelWithPct[3]?.pct || 0}%</strong>.
+            🎯 Funnel target: <strong>15%</strong> conversion. Currently at <strong>{conversionRate}%</strong>
+            {conversionRate >= 15
+              ? <span className="ml-1 text-emerald-500 font-bold">✓ Target Met</span>
+              : <span className="ml-1 text-amber-500 font-bold">↑ Below Target</span>
+            }
           </div>
         </div>
 
-        {/* Lead Sources channel list (Right Column) */}
+        {/* Source Channels */}
         <div className="glass-panel p-6 rounded-3xl flex flex-col">
           <div className="mb-4">
-            <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-200">Source Channels Performance</h3>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Channels sorted by total inquiry registration volume</p>
+            <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-200">
+              Source Channels Performance
+            </h3>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+              Channels sorted by total inquiry registration volume
+            </p>
           </div>
 
           <div className="flex-1 space-y-4 overflow-y-auto max-h-[300px] pr-1">
             {sourcesBreakdown.length === 0 ? (
               <div className="text-center py-10 text-slate-400 text-xs">No source records available</div>
             ) : (
-              sourcesBreakdown.map((item, idx) => (
-                <div key={idx} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-700 dark:text-slate-300">{item.name}</span>
-                    <span className="text-slate-500 dark:text-slate-400 font-semibold">{item.count} Leads ({item.pct}%)</span>
+              sourcesBreakdown.map((item, idx) => {
+                const colors = ['bg-indigo-500', 'bg-purple-500', 'bg-cyan-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500'];
+                return (
+                  <div key={idx} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-700 dark:text-slate-300">{item.name}</span>
+                      <span className="text-slate-500 dark:text-slate-400 font-semibold">
+                        {item.count} Leads ({item.pct}%)
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-100 dark:bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-200/20 dark:border-slate-800/40">
+                      <div
+                        className={`h-full ${colors[idx % colors.length]} rounded-full transition-all duration-500`}
+                        style={{ width: `${item.pct}%` }}
+                      />
+                    </div>
                   </div>
-                  {/* Progress bar */}
-                  <div className="w-full bg-slate-100 dark:bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-200/20 dark:border-slate-800/40">
-                    <div 
-                      className="h-full bg-indigo-500 rounded-full"
-                      style={{ width: `${item.pct}%` }}
-                    />
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
-
       </div>
 
-      {/* Counselor rankings grid */}
-      <div className="glass-panel p-6 rounded-3xl space-y-6">
+      {/* Status Breakdown Bar Chart */}
+      <div className="glass-panel p-6 rounded-3xl space-y-4">
         <div>
-          <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-200">Counselor Performance Rankings</h3>
-          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Leaderboard of active counselors sorted by admissions closed</p>
+          <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-200">Lead Status Distribution</h3>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+            Count of leads grouped by their current pipeline status
+          </p>
         </div>
-
-        {/* Counselor rankings table */}
-        <div className="overflow-x-auto rounded-2xl border border-slate-100 dark:border-slate-800">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/10">
-                <th className="px-5 py-3 font-black text-slate-400 uppercase tracking-wider">Rank & Counselor</th>
-                <th className="px-5 py-3 font-black text-slate-400 uppercase tracking-wider">Active Workload</th>
-                <th className="px-5 py-3 font-black text-slate-400 uppercase tracking-wider">Admissions Confirmed</th>
-                <th className="px-5 py-3 font-black text-slate-400 uppercase tracking-wider">Conversion Rate</th>
-                <th className="px-5 py-3 font-black text-slate-400 uppercase tracking-wider">Target Achieved (Goal: 5)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/40">
-              {counselorsPerformance.map((c, idx) => (
-                <tr key={c.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10 transition-colors">
-                  <td className="px-5 py-3.5 flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 font-bold flex items-center justify-center border border-indigo-100/50 dark:border-indigo-900/30">
-                      {idx + 1}
-                    </div>
-                    <div>
-                      <span className="font-bold text-slate-800 dark:text-slate-200 block">{c.name}</span>
-                      <span className="text-[10px] text-slate-400">{c.email}</span>
-                    </div>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className="font-semibold text-slate-700 dark:text-slate-350">{c.activeLeads} Leads</span>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className="font-bold text-slate-850 dark:text-slate-100">{c.admissions} Confirmed</span>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className="font-black text-emerald-600 dark:text-emerald-450">{c.conversionRate}%</span>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-24 bg-slate-100 dark:bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-200/20 dark:border-slate-850">
-                        <div 
-                          className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 rounded-full"
-                          style={{ width: `${Math.min(c.targetAchieved, 100)}%` }}
-                        />
-                      </div>
-                      <span className="font-bold text-slate-700 dark:text-slate-300">{c.targetAchieved}%</span>
-                    </div>
-                  </td>
-                </tr>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={statusGroups} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(100,116,139,0.1)" />
+            <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} />
+            <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#94a3b8' }} />
+            <Tooltip
+              contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 12, fontSize: 12 }}
+              labelStyle={{ color: '#e2e8f0', fontWeight: 700 }}
+              itemStyle={{ color: '#94a3b8' }}
+            />
+            <Bar dataKey="count" radius={[6, 6, 0, 0]} name="Leads">
+              {statusGroups.map((entry, index) => (
+                <Cell key={index} fill={entry.fill} />
               ))}
-            </tbody>
-          </table>
-        </div>
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </div>
+
+      {/* Counselor Rankings (Admin only) */}
+      {isAdmin && (
+        <div className="glass-panel p-6 rounded-3xl space-y-6">
+          <div>
+            <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-200">
+              Counselor Performance Rankings
+            </h3>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+              Leaderboard of active counselors sorted by admissions closed
+            </p>
+          </div>
+
+          {counselorsPerformance.length === 0 ? (
+            <div className="text-center py-8 text-slate-400 text-xs">No counselor data available</div>
+          ) : (
+            <div className="overflow-x-auto rounded-2xl border border-slate-100 dark:border-slate-800">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/10">
+                    <th className="px-5 py-3 font-black text-slate-400 uppercase tracking-wider">Rank &amp; Counselor</th>
+                    <th className="px-5 py-3 font-black text-slate-400 uppercase tracking-wider">Active Leads</th>
+                    <th className="px-5 py-3 font-black text-slate-400 uppercase tracking-wider">Admissions Confirmed</th>
+                    <th className="px-5 py-3 font-black text-slate-400 uppercase tracking-wider">Conversion Rate</th>
+                    <th className="px-5 py-3 font-black text-slate-400 uppercase tracking-wider">Target Achieved (Goal: 5)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/40">
+                  {counselorsPerformance.map((c, idx) => (
+                    <tr key={c.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/10 transition-colors">
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-6 h-6 rounded-lg text-white font-bold flex items-center justify-center text-[10px] ${
+                            idx === 0 ? 'bg-amber-400' : idx === 1 ? 'bg-slate-400' : idx === 2 ? 'bg-orange-400' : 'bg-indigo-100 dark:bg-indigo-950/20 !text-indigo-600'
+                          }`}>
+                            {idx + 1}
+                          </div>
+                          <div>
+                            <span className="font-bold text-slate-800 dark:text-slate-200 block">{c.name}</span>
+                            <span className="text-[10px] text-slate-400">{c.email}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">{c.activeLeads} Leads</span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className={`font-bold ${c.admissions > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
+                          {c.admissions} Confirmed
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className={`font-black ${c.conversionRate >= 15 ? 'text-emerald-600' : c.conversionRate > 0 ? 'text-amber-500' : 'text-slate-400'}`}>
+                          {c.conversionRate}%
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-24 bg-slate-100 dark:bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-200/20 dark:border-slate-850">
+                            <div
+                              className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 rounded-full transition-all duration-500"
+                              style={{ width: `${c.targetAchieved}%` }}
+                            />
+                          </div>
+                          <span className="font-bold text-slate-700 dark:text-slate-300">{c.targetAchieved}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
