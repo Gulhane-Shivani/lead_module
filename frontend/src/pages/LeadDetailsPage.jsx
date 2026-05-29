@@ -79,13 +79,30 @@ export default function LeadDetailsPage() {
     return null; // Will display as NA
   };
 
-  // Group all formFields by their section for organised display
-  const fieldsBySection = formFields.reduce((acc, field) => {
+  // Use the LEAD'S specific form fields (not the global formFields which may be incomplete)
+  const displayFields = (leadForm?.fields || formFields || []).map(f => ({
+    ...f,
+    type: f.field_type || f.type
+  }));
+
+  // Group by section for organised display
+  const fieldsBySection = displayFields.reduce((acc, field) => {
     const section = field.section || 'General Details';
     if (!acc[section]) acc[section] = [];
     acc[section].push(field);
     return acc;
   }, {});
+
+  // Safety net: show any field_values not covered by displayFields
+  // (handles fields added after the lead was created, or form mismatches)
+  const displayFieldIds = new Set(displayFields.map(f => f.id));
+  const extraValues = (lead.field_values || []).filter(
+    fv =>
+      !displayFieldIds.has(fv.field_id) &&
+      fv.value !== null &&
+      fv.value !== undefined &&
+      String(fv.value).trim() !== ''
+  );
 
   // Helper to parse type/notes from note string
   const getFollowupDetails = (fup) => {
@@ -285,6 +302,30 @@ export default function LeadDetailsPage() {
                 </div>
               </div>
             ))
+          )}
+
+          {/* Safety-net: field_values not covered by the form fields above */}
+          {extraValues.length > 0 && (
+            <div className="glass-panel p-6 rounded-3xl space-y-4">
+              <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                <ClipboardList className="w-4 h-4" /> Additional Details
+              </h3>
+              <div className="space-y-3.5 text-xs">
+                {extraValues.map((fv) => (
+                  <div
+                    key={fv.field_id}
+                    className="border-b border-slate-100 dark:border-slate-800/40 pb-3 last:border-b-0 last:pb-0"
+                  >
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                      {fv.field?.label || `Field #${fv.field_id}`}
+                    </span>
+                    <span className="text-slate-800 dark:text-slate-200 font-semibold block mt-1">
+                      {String(fv.value)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {/* Reminders & Schedules panel */}
