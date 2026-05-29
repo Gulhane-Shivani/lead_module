@@ -1,7 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
-import { INITIAL_COUNSELORS, ANALYTICS_TREND_DATA, ANALYTICS_SOURCE_DATA } from '../data/mockData';
 import StatusBadge from '../components/Common/StatusBadge';
 import { Link } from 'react-router-dom';
 import { 
@@ -34,8 +33,16 @@ import {
   Legend 
 } from 'recharts';
 
+// Helper: extract a field_value from a lead by field label
+const getFieldValue = (lead, label) => {
+  const fv = (lead.field_values || []).find(
+    v => (v.field?.label || '').toLowerCase().trim() === label.toLowerCase().trim()
+  );
+  return fv ? fv.value : null;
+};
+
 export default function DashboardPage() {
-  const { leads: rawLeads, followups: rawFollowups } = useApp();
+  const { leads: rawLeads, followups: rawFollowups, counselors } = useApp();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -99,66 +106,67 @@ export default function DashboardPage() {
     }
   ];
 
-  // 2. Prepare charts data dynamically
-  // Monthly graph (mix mock with dynamic numbers)
-  const monthlyGraphData = [...ANALYTICS_TREND_DATA];
-  // update latest month (May) based on current leads
-  const currentMonthIdx = monthlyGraphData.findIndex(d => d.month === 'May');
-  if (currentMonthIdx !== -1) {
-    monthlyGraphData[currentMonthIdx].Leads = Math.max(monthlyGraphData[currentMonthIdx].Leads, totalLeads * 10);
-    monthlyGraphData[currentMonthIdx].Admissions = Math.max(monthlyGraphData[currentMonthIdx].Admissions, confirmed * 8);
-  }
+  // 2. Monthly growth trend — built from real lead created_at
+  const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const currentYear = new Date().getFullYear();
+  const monthLeads = {}, monthConfirmed = {};
+  leads.forEach(lead => {
+    if (!lead.created_at) return;
+    const d = new Date(lead.created_at);
+    if (d.getFullYear() !== currentYear) return;
+    const m = MONTH_NAMES[d.getMonth()];
+    monthLeads[m] = (monthLeads[m] || 0) + 1;
+    if (lead.status === 'Admission Confirmed') monthConfirmed[m] = (monthConfirmed[m] || 0) + 1;
+  });
+  const upToMonth = new Date().getMonth();
+  const monthlyGraphData = MONTH_NAMES.slice(0, upToMonth + 1).map(m => ({
+    month: m,
+    Leads: monthLeads[m] || 0,
+    Admissions: monthConfirmed[m] || 0
+  }));
 
-  // Source breakdown based on current leads
+  // Source breakdown — read from field_values
   const sourceCounts = leads.reduce((acc, lead) => {
-    acc[lead.source || 'Google Search'] = (acc[lead.source || 'Google Search'] || 0) + 1;
+    const src = getFieldValue(lead, 'Source') || 'Unknown';
+    acc[src] = (acc[src] || 0) + 1;
     return acc;
   }, {});
+  const sourceColors = ['#6366f1', '#9333ea', '#06b6d4', '#10b981', '#f97316', '#ec4899'];
+  const finalSourceData = Object.keys(sourceCounts).map((key, idx) => ({
+    name: key,
+    value: sourceCounts[key],
+    color: sourceColors[idx % sourceColors.length]
+  }));
 
-  const dynamicSourceData = Object.keys(sourceCounts).map((key, idx) => {
-    const defaultColors = ['#6366f1', '#9333ea', '#06b6d4', '#10b981', '#f97316', '#ec4899'];
-    return {
-      name: key,
-      value: sourceCounts[key],
-      color: defaultColors[idx % defaultColors.length]
-    };
-  });
-
-  const finalSourceData = dynamicSourceData.length > 0 ? dynamicSourceData : ANALYTICS_SOURCE_DATA;
-
-  // Counselor active workload compilation
-  const counselorData = INITIAL_COUNSELORS.map(cn => {
-    const counselorLeads = leads.filter(l => l.counselor?.full_name === cn.name || l.counselor === cn.name);
-    const counselorConfirmed = counselorLeads.filter(l => l.status === 'Admission Confirmed').length;
-    return {
-      name: cn.name.split(' ')[0], // first name for chart label
-      'Active Leads': counselorLeads.length || cn.activeLeads,
-      'Conversions': counselorConfirmed || Math.round(cn.activeLeads * (cn.conversionRate / 100))
-    };
-  });
+  // Counselor bar chart — use live counselors matched by counselor_id
+  const counselorData = counselors
+    .filter(c => c.role === 'counselor')
+    .map(c => {
+      const assigned = leads.filter(l => l.counselor_id === c.id || l.counselor?.id === c.id);
+      return {
+        name: c.full_name.split(' ')[0],
+        'Active Leads': assigned.length,
+        'Conversions': assigned.filter(l => l.status === 'Admission Confirmed').length
+      };
+    })
+    .filter(c => c['Active Leads'] > 0);
 
   // Recent leads list
   const recentLeads = leads.slice(0, 5);
 
-  // Helper: get a field value from a lead's field_values array by label
-  const getLeadFieldByLabel = (lead, label) => {
-    const fv = (lead.field_values || []).find(
-      v => (v.field?.label || '').toLowerCase() === label.toLowerCase()
-    );
-    return fv ? fv.value : '';
-  };
-
-  // Activity feed: vertical followups timeline
+  // Activity feed — use backend snake_case fields
   const recentActivities = followups.slice(0, 5).map(f => {
-    const lead = leads.find(l => l.id === f.leadId);
+    const lead = rawLeads.find(l => l.id === f.lead_id);
+    const dateStr = f.scheduled_at || f.created_at;
     return {
       id: f.id,
-      leadName: lead ? lead.name : 'Unknown Student',
-      leadId: f.leadId,
-      type: f.type,
-      notes: f.notes,
-      counselor: f.counselor,
-      time: new Date(f.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+      leadName: lead ? lead.full_name : 'Unknown Student',
+      leadId: f.lead_id,
+      note: f.note || '—',
+      counselorName: lead?.counselor?.full_name || 'N/A',
+      time: dateStr && !isNaN(new Date(dateStr))
+        ? new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : 'N/A'
     };
   });
 
@@ -370,8 +378,7 @@ export default function DashboardPage() {
           </div>
           <div className="flex-1 space-y-3.5 overflow-y-auto max-h-[250px] pr-1">
             {recentLeads.map((lead) => {
-              const course = getLeadFieldByLabel(lead, 'Course of Interest') ||
-                             getLeadFieldByLabel(lead, 'course') || 'Not specified';
+              const course = getFieldValue(lead, 'Course of Interest') || 'Not specified';
               return (
                 <Link
                   to={`/leads/${lead.id}`}
@@ -435,10 +442,10 @@ export default function DashboardPage() {
                       <span className="text-[9px] text-slate-400 shrink-0">{act.time}</span>
                     </div>
                     <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed truncate">
-                      {act.notes}
+                      {act.note}
                     </p>
                     <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase mt-1 block">
-                      Logged by {act.counselor}
+                      Logged by {act.counselorName}
                     </span>
                   </div>
                 </div>
