@@ -18,7 +18,7 @@ import {
   Award, 
   Download,
 } from 'lucide-react';
-import exportToCSV from '../utils/exportCSV';
+import { exportToCSV, mapLeadToCSVRow } from '../utils/exportCSV';
 
 // Helper: extract a field_value from a lead by field label
 const getFieldValue = (lead, label) => {
@@ -128,6 +128,11 @@ export default function AnalyticsPage() {
   ];
 
   // ─── 5. Export ─────────────────────────────────────────────────────────────
+  const handleExportLeads = () => {
+    const rows = leads.map(mapLeadToCSVRow);
+    exportToCSV(rows, `leads_report_${new Date().toISOString().split('T')[0]}.csv`);
+  };
+
   const handleExportCounselors = () => {
     const csvData = counselorsPerformance.map(c => ({
       'Counselor Name': c.name,
@@ -154,14 +159,24 @@ export default function AnalyticsPage() {
               : 'Your personal lead conversion funnel and performance metrics.'}
           </p>
         </div>
-        {isAdmin && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={handleExportCounselors}
-            className="px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-xl flex items-center gap-2 transition-all shadow-sm hover:border-indigo-500/40"
+            onClick={handleExportLeads}
+            disabled={!leads.length}
+            className="px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-xl flex items-center gap-2 transition-all shadow-sm hover:border-indigo-500/40 disabled:opacity-50"
           >
-            <Download className="w-4 h-4" /> Export Report
+            <Download className="w-4 h-4" /> Export Leads
           </button>
-        )}
+          {isAdmin && (
+            <button
+              onClick={handleExportCounselors}
+              disabled={!counselorsPerformance.length}
+              className="px-4 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-xl flex items-center gap-2 transition-all shadow-sm shadow-indigo-500/20 disabled:opacity-50"
+            >
+              <Download className="w-4 h-4" /> Export Report
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Summary KPI Strip */}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
-import { exportToCSV } from '../utils/exportCSV';
+import { exportToCSV, mapLeadToCSVRow } from '../utils/exportCSV';
 import StatusBadge from '../components/Common/StatusBadge';
 import Modal from '../components/Common/Modal';
 import { 
@@ -132,7 +132,8 @@ export default function LeadListPage() {
   };
 
   const handleExport = () => {
-    exportToCSV(filteredLeads, `leads_export_${new Date().toISOString().split('T')[0]}.csv`);
+    const rows = filteredLeads.map(mapLeadToCSVRow);
+    exportToCSV(rows, `leads_export_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
   return (
