@@ -17,12 +17,11 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUser = async () => {
     try {
-      // In this backend, we don't have a /users/me endpoint yet, 
-      // so we'll just parse the JWT or assume the login was successful.
-      // For now, I'll add a mock user based on the email we used.
       const token = localStorage.getItem('edulead_token');
       if (token) {
-        setUser({ email: 'admin@example.com', role: 'admin' });
+        // Fetch real user info from backend
+        const response = await api.get('/users/me');
+        setUser(response.data); // { id, full_name, email, role }
       }
     } catch (error) {
       console.error('Failed to fetch user:', error);
@@ -49,7 +48,10 @@ export const AuthProvider = ({ children }) => {
       });
       const { access_token } = response.data;
       localStorage.setItem('edulead_token', access_token);
-      setUser({ email, role: 'admin' }); // Mock roles for now
+
+      // Fetch actual user profile after login
+      const userResponse = await api.get('/users/me');
+      setUser(userResponse.data);
       return true;
     } catch (error) {
       console.error('Login failed:', error);

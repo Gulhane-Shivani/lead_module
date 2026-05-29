@@ -133,6 +133,14 @@ export default function DashboardPage() {
   // Recent leads list
   const recentLeads = leads.slice(0, 5);
 
+  // Helper: get a field value from a lead's field_values array by label
+  const getLeadFieldByLabel = (lead, label) => {
+    const fv = (lead.field_values || []).find(
+      v => (v.field?.label || '').toLowerCase() === label.toLowerCase()
+    );
+    return fv ? fv.value : '';
+  };
+
   // Activity feed: vertical followups timeline
   const recentActivities = followups.slice(0, 5).map(f => {
     const lead = leads.find(l => l.id === f.leadId);
@@ -354,25 +362,38 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="flex-1 space-y-3.5 overflow-y-auto max-h-[250px] pr-1">
-            {recentLeads.map((lead) => (
-              <Link 
-                to={`/leads/${lead.id}`} 
-                key={lead.id} 
-                className="flex items-center justify-between p-2.5 rounded-xl border border-slate-100 hover:border-slate-200 dark:border-slate-800/40 dark:hover:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-all duration-150"
-              >
-                <div className="min-w-0 flex-1">
-                  <span className="block text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                    {lead.name}
-                  </span>
-                  <span className="block text-[10px] text-slate-400 truncate mt-0.5">
-                    {lead.course}
-                  </span>
-                </div>
-                <div className="ml-3 shrink-0">
-                  <StatusBadge status={lead.status} />
-                </div>
-              </Link>
-            ))}
+            {recentLeads.map((lead) => {
+              const course = getLeadFieldByLabel(lead, 'Course of Interest') ||
+                             getLeadFieldByLabel(lead, 'course') || 'Not specified';
+              return (
+                <Link
+                  to={`/leads/${lead.id}`}
+                  key={lead.id}
+                  className="flex items-start justify-between p-3 rounded-xl border border-slate-100 hover:border-indigo-200 dark:border-slate-800/40 dark:hover:border-indigo-900/40 hover:bg-indigo-50/20 dark:hover:bg-indigo-950/10 transition-all duration-150 gap-3"
+                >
+                  {/* Avatar */}
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[10px] font-black shrink-0 shadow-sm">
+                    {(lead.full_name || '?').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                  </div>
+                  {/* Details */}
+                  <div className="min-w-0 flex-1">
+                    <span className="block text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                      {lead.full_name || 'Unknown'}
+                    </span>
+                    <span className="block text-[10px] text-indigo-500 dark:text-indigo-400 font-medium truncate mt-0.5">
+                      {course}
+                    </span>
+                    <span className="block text-[10px] text-slate-400 truncate mt-0.5">
+                      {lead.email || ''}
+                    </span>
+                  </div>
+                  {/* Status */}
+                  <div className="shrink-0 pt-0.5">
+                    <StatusBadge status={lead.status} />
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
 

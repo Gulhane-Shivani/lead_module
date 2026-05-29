@@ -49,19 +49,30 @@ export default function LeadDetailsPage() {
     );
   }
 
-  // Helper to get dynamic field value
-  const getFieldValue = (label) => {
-    if (!lead) return '';
-    const fv = (lead.field_values || []).find(v => v.field?.label === label);
-    return fv ? fv.value : '';
+  // Helper to get a field value for any formField (by id first, then by label for core fields)
+  const getFormFieldValue = (field) => {
+    if (!lead) return null;
+
+    // Try lookup by field_id in field_values
+    const byId = (lead.field_values || []).find(v => v.field_id === field.id);
+    if (byId) return byId.value;
+
+    // Fallback for core identity fields stored as direct columns
+    const label = (field.label || '').toLowerCase().trim();
+    if (label === 'full name' || label === 'name') return lead.full_name;
+    if (label === 'email' || label === 'email address') return lead.email;
+    if (label === 'phone' || label === 'mobile' || label === 'phone number' || label === 'contact number') return lead.phone;
+
+    return null;
   };
 
-  // Helper to get custom field value by field_id
-  const getCustomFieldValue = (fieldId) => {
-    if (!lead) return '';
-    const fv = (lead.field_values || []).find(v => v.field_id === fieldId);
-    return fv ? fv.value : '';
-  };
+  // Group all formFields by their section for organised display
+  const fieldsBySection = formFields.reduce((acc, field) => {
+    const section = field.section || 'General Details';
+    if (!acc[section]) acc[section] = [];
+    acc[section].push(field);
+    return acc;
+  }, {});
 
   // Helper to parse type/notes from note string
   const getFollowupDetails = (fup) => {
@@ -102,8 +113,7 @@ export default function LeadDetailsPage() {
     };
   });
 
-  // 3. Compile custom fields response
-  const customFieldsConfig = formFields.filter(field => !field.is_core);
+  // (custom field config no longer needed — using fieldsBySection above)
 
   // Handle follow-up submission
   const handleAddFollowup = (e) => {
@@ -215,50 +225,53 @@ export default function LeadDetailsPage() {
         {/* Left Column: Lead & Academic details + Custom field results */}
         <div className="lg:col-span-1 space-y-6">
           
-          {/* Core Info */}
-          <div className="glass-panel p-6 rounded-3xl space-y-4">
-            <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
-              <ClipboardList className="w-4 h-4" /> Academic Preferences
-            </h3>
-            
-            <div className="space-y-3.5 text-xs">
-              <div>
-                <span className="text-slate-400 block font-medium">Course of Interest</span>
-                <span className="text-slate-800 dark:text-slate-200 font-bold mt-0.5 block">{getFieldValue("Course of Interest") || 'N/A'}</span>
-              </div>
-              <div>
-                <span className="text-slate-400 block font-medium">Inquiry Channel</span>
-                <span className="text-slate-800 dark:text-slate-200 font-semibold mt-0.5 block">{getFieldValue("Source") || 'Direct Search'}</span>
-              </div>
-              <div>
-                <span className="text-slate-400 block font-medium">Additional Notes</span>
-                <p className="text-slate-600 dark:text-slate-400 mt-1 leading-relaxed border-l-2 border-indigo-500/20 pl-2.5">
-                  {getFieldValue("Internal Notes") || 'No counselor notes logged.'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Dynamic / Custom Form Fields responses */}
-          {customFieldsConfig.length > 0 && (
-            <div className="glass-panel p-6 rounded-3xl space-y-4">
-              <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                Custom Form Answers
+          {/* Dynamic Form Fields — grouped by section, all fields from the active form */}
+          {Object.keys(fieldsBySection).length === 0 ? (
+            <div className="glass-panel p-6 rounded-3xl">
+              <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                <ClipboardList className="w-4 h-4" /> Lead Information
               </h3>
-              <div className="space-y-4 text-xs">
-                {customFieldsConfig.map((field) => {
-                  const val = getCustomFieldValue(field.id);
-                  return (
-                    <div key={field.id} className="border-b border-slate-100 dark:border-slate-800/40 pb-3 last:border-b-0 last:pb-0">
-                      <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">{field.label}</span>
-                      <span className="text-slate-800 dark:text-slate-200 font-bold block mt-1">
-                        {val === true ? 'Yes' : val === false ? 'No' : (val || <em className="text-slate-400 font-normal">No response</em>)}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+              <p className="text-[11px] text-slate-400 mt-3">No form fields configured.</p>
             </div>
+          ) : (
+            Object.entries(fieldsBySection).map(([section, fields]) => (
+              <div key={section} className="glass-panel p-6 rounded-3xl space-y-4">
+                <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                  <ClipboardList className="w-4 h-4" /> {section}
+                </h3>
+                <div className="space-y-3.5 text-xs">
+                  {fields.map((field) => {
+                    const raw = getFormFieldValue(field);
+                    let displayValue;
+                    if (raw === true) displayValue = 'Yes';
+                    else if (raw === false) displayValue = 'No';
+                    else if (raw !== null && raw !== undefined && String(raw).trim() !== '') {
+                      displayValue = String(raw);
+                    } else {
+                      displayValue = null; // will show NA
+                    }
+                    return (
+                      <div
+                        key={field.id}
+                        className="border-b border-slate-100 dark:border-slate-800/40 pb-3 last:border-b-0 last:pb-0"
+                      >
+                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                          {field.label}
+                          {field.required && <span className="text-rose-400 ml-0.5">*</span>}
+                        </span>
+                        {displayValue ? (
+                          <span className="text-slate-800 dark:text-slate-200 font-semibold block mt-1">
+                            {displayValue}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 dark:text-slate-500 italic block mt-1 text-[11px]">NA</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
           )}
 
           {/* Reminders & Schedules panel */}

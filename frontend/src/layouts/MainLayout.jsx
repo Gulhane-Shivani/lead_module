@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, Link, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { 
   GraduationCap, 
   Search, 
@@ -25,6 +26,19 @@ export default function MainLayout() {
     markAllNotificationsRead, 
     leads 
   } = useApp();
+  const { user, logout } = useAuth();
+
+  // Derive display values from real user
+  const isAdmin = user?.role === 'admin';
+  const displayName = user?.full_name || user?.email?.split('@')[0] || 'User';
+  const userInitials = displayName
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+  const userRole = isAdmin ? 'Administrator' : 'Lead Counselor';
+  const userEmail = user?.email || '';
   
   const navigate = useNavigate();
   const location = useLocation();
@@ -196,6 +210,18 @@ export default function MainLayout() {
               </AnimatePresence>
             </div>
 
+            {/* Logout Button - Always Visible */}
+            <button
+              onClick={() => {
+                logout();
+                navigate('/login');
+              }}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-rose-600 hover:text-white dark:text-rose-400 bg-rose-50 hover:bg-rose-600 dark:bg-rose-950/30 dark:hover:bg-rose-600 dark:hover:text-white border border-rose-200/60 dark:border-rose-900/40 hover:border-rose-600 rounded-xl transition-all duration-200 shadow-sm"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Logout
+            </button>
+
             {/* Profile Dropdown */}
             <div className="relative" ref={profileRef}>
               <button
@@ -203,11 +229,18 @@ export default function MainLayout() {
                 className="flex items-center gap-2 group focus:outline-none"
               >
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white font-bold text-xs flex items-center justify-center shadow-md shadow-purple-500/10 group-hover:scale-102 transition-transform duration-200">
-                  ER
+                  {userInitials}
                 </div>
                 <div className="hidden sm:block text-left">
-                  <span className="block text-xs font-bold text-slate-700 dark:text-slate-300 leading-tight">Elena Rostova</span>
-                  <span className="block text-[10px] text-slate-400 font-semibold">Lead Counselor</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-tight">{displayName}</span>
+                    {isAdmin && (
+                      <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-md shadow-sm">
+                        Admin
+                      </span>
+                    )}
+                  </div>
+                  <span className="block text-[10px] text-slate-400 font-semibold">{userRole}</span>
                 </div>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-400 transition-colors duration-150" />
               </button>
@@ -222,8 +255,15 @@ export default function MainLayout() {
                     className="absolute right-0 mt-2.5 w-52 glass-panel-heavy rounded-2xl shadow-xl overflow-hidden z-50 text-left border border-slate-200/60 dark:border-slate-800/60"
                   >
                     <div className="p-3 bg-gradient-to-b from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 border-b border-slate-100 dark:border-slate-800/50">
-                      <span className="block text-xs font-bold text-slate-800 dark:text-slate-200">Elena Rostova</span>
-                      <span className="block text-[10px] text-slate-400 mt-0.5 truncate">elena.r@edulead.com</span>
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{displayName}</span>
+                        {isAdmin && (
+                          <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-md">
+                            Admin
+                          </span>
+                        )}
+                      </div>
+                      <span className="block text-[10px] text-slate-400 truncate">{userEmail}</span>
                     </div>
                     <div className="p-1">
                       <button className="w-full px-3 py-2 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-800/30 rounded-xl flex items-center gap-2">
@@ -235,7 +275,7 @@ export default function MainLayout() {
                       <div className="h-px bg-slate-100 dark:bg-slate-800 my-1 mx-2" />
                       <button 
                         onClick={() => {
-                          localStorage.removeItem('edulead_token');
+                          logout();
                           navigate('/login');
                         }}
                         className="w-full px-3 py-2 text-xs text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 hover:bg-rose-50/30 dark:hover:bg-rose-950/10 rounded-xl flex items-center gap-2"
