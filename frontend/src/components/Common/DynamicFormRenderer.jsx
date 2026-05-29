@@ -36,11 +36,10 @@ export default function DynamicFormRenderer({
         <select
           {...register(String(field.id))}
           className={commonClasses}
-          defaultValue={defaultValues?.[String(field.id)] || ''}
         >
           <option value="">— Select Counselor —</option>
           {counselors.map((c) => (
-            <option key={c.id} value={c.id}>
+            <option key={c.id} value={String(c.id)}>
               {c.full_name}
               {c.role === 'admin' ? '  (Admin)' : ''}
             </option>

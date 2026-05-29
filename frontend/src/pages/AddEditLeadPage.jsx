@@ -57,6 +57,7 @@ export default function AddEditLeadPage() {
         else if (field.label === "Email Address") acc[field.id] = leadToEdit.email;
         else if (field.label === "Phone Number") acc[field.id] = leadToEdit.phone;
         else if (field.label === "Status") acc[field.id] = leadToEdit.status;
+        else if (field.label === "Assigned Counselor") acc[field.id] = leadToEdit.counselor_id ? String(leadToEdit.counselor_id) : '';
         return acc;
       }, {})
     };
