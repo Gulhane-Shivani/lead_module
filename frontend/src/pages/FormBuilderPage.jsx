@@ -10,7 +10,6 @@ import {
   CircleDot, 
   Calendar, 
   AlignLeft, 
-  Upload, 
   Plus, 
   Trash2, 
   ArrowUp, 
@@ -119,7 +118,6 @@ export default function FormBuilderPage() {
     { type: 'radio', label: 'Radio Button Group', icon: <CircleDot className="w-4 h-4" /> },
     { type: 'date picker', label: 'Date Picker', icon: <Calendar className="w-4 h-4" /> },
     { type: 'textarea', label: 'Multi-line Notes', icon: <AlignLeft className="w-4 h-4" /> },
-    { type: 'file upload', label: 'File Attachment', icon: <Upload className="w-4 h-4" /> },
   ];
 
   return (

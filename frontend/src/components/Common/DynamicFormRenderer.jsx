@@ -70,7 +70,6 @@ export default function DynamicFormRenderer({
     // ── Map backend field_type to HTML input type ──
     let htmlType = fType;
     if (htmlType === 'date picker') htmlType = 'date';
-    if (htmlType === 'file upload') htmlType = 'file';
     if (htmlType === 'number') htmlType = 'number';
 
     switch (fType) {
