@@ -53,17 +53,30 @@ export default function LeadDetailsPage() {
   const getFormFieldValue = (field) => {
     if (!lead) return null;
 
-    // Try lookup by field_id in field_values
+    // 1. Try lookup by field_id in field_values
     const byId = (lead.field_values || []).find(v => v.field_id === field.id);
-    if (byId) return byId.value;
+    if (byId !== undefined && byId !== null) return byId.value;
 
-    // Fallback for core identity fields stored as direct columns
+    // 2. Fallback: resolve core fields stored as direct columns on the lead
     const label = (field.label || '').toLowerCase().trim();
-    if (label === 'full name' || label === 'name') return lead.full_name;
-    if (label === 'email' || label === 'email address') return lead.email;
-    if (label === 'phone' || label === 'mobile' || label === 'phone number' || label === 'contact number') return lead.phone;
 
-    return null;
+    // Identity fields
+    if (['full name', 'name', 'student full name', 'student name'].includes(label))
+      return lead.full_name;
+    if (['email', 'email address', 'student email'].includes(label))
+      return lead.email;
+    if (['phone', 'mobile', 'phone number', 'contact number', 'mobile number'].includes(label))
+      return lead.phone;
+
+    // Status
+    if (label === 'status') return lead.status;
+
+    // Assigned Counselor — resolve name from counselors list
+    if (label === 'assigned counselor' || label === 'counselor') {
+      return getCounselorName(lead.counselor_id);
+    }
+
+    return null; // Will display as NA
   };
 
   // Group all formFields by their section for organised display

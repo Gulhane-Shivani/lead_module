@@ -211,7 +211,7 @@ export default function MainLayout() {
             </div>
 
             {/* Logout Button - Always Visible */}
-            <button
+            {/* <button
               onClick={() => {
                 logout();
                 navigate('/login');
@@ -219,8 +219,8 @@ export default function MainLayout() {
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-rose-600 hover:text-white dark:text-rose-400 bg-rose-50 hover:bg-rose-600 dark:bg-rose-950/30 dark:hover:bg-rose-600 dark:hover:text-white border border-rose-200/60 dark:border-rose-900/40 hover:border-rose-600 rounded-xl transition-all duration-200 shadow-sm"
             >
               <LogOut className="w-3.5 h-3.5" />
-              Logout
-            </button>
+              
+            </button> */}
 
             {/* Profile Dropdown */}
             <div className="relative" ref={profileRef}>
