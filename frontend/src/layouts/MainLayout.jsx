@@ -67,7 +67,7 @@ export default function MainLayout() {
   const navLinks = [
     { path: '/', label: 'Dashboard', icon: TrendingUp },
     { path: '/leads', label: 'Leads', icon: Users },
-    { path: '/form-builder', label: 'Form Builder', icon: FileText },
+    ...(isAdmin ? [{ path: '/form-builder', label: 'Form Builder', icon: FileText }] : []),
     { path: '/analytics', label: 'Analytics', icon: BarChart3 },
   ];
 

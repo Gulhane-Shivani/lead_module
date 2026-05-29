@@ -15,16 +15,22 @@ import LoginPage from '../pages/LoginPage';
 import Toast from '../components/Common/Toast';
 import AppProvider from '../context/AppContext';
 
-function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth();
+function ProtectedRoute({ children, adminOnly = false }) {
+  const { isAuthenticated, user, loading } = useAuth();
   
   if (loading) return null;
-  return isAuthenticated ? (
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  
+  if (adminOnly && user?.role !== 'admin') {
+    return <Navigate to="/" replace />;
+  }
+
+  return (
     <AppProvider>
       {children}
       <Toast />
     </AppProvider>
-  ) : <Navigate to="/login" replace />;
+  );
 }
 
 export default function AppRoutes() {
@@ -47,8 +53,12 @@ export default function AppRoutes() {
           <Route path="leads/:id" element={<LeadDetailsPage />} />
           <Route path="leads/edit/:id" element={<AddEditLeadPage />} />
           
-          {/* Dynamic Form Builder */}
-          <Route path="form-builder" element={<FormBuilderPage />} />
+          {/* Dynamic Form Builder - Admin Only */}
+          <Route path="form-builder" element={
+            <ProtectedRoute adminOnly={true}>
+              <FormBuilderPage />
+            </ProtectedRoute>
+          } />
           
           {/* Full Analytics Page */}
           <Route path="analytics" element={<AnalyticsPage />} />
