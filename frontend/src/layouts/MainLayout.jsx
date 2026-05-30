@@ -41,7 +41,9 @@ export default function MainLayout() {
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifMenu, setShowNotifMenu] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const notifRef = useRef(null);
+  const mobileMenuRef = useRef(null);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -50,6 +52,9 @@ export default function MainLayout() {
     function handleClickOutside(event) {
       if (notifRef.current && !notifRef.current.contains(event.target)) {
         setShowNotifMenu(false);
+      }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
+        setShowMobileMenu(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -61,6 +66,7 @@ export default function MainLayout() {
     if (searchQuery.trim()) {
       navigate(`/leads?search=${encodeURIComponent(searchQuery)}`);
       setSearchQuery('');
+      setShowMobileMenu(false);
     }
   };
 
@@ -77,22 +83,32 @@ export default function MainLayout() {
       <header className="sticky top-0 z-40 w-full glass-panel border-b border-slate-200/50 dark:border-slate-800/50 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-200">
-              <GraduationCap className="w-5.5 h-5.5" />
-            </div>
-            <div>
-              <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 bg-clip-text text-transparent dark:from-indigo-400 dark:via-purple-400 dark:to-cyan-400">
-                EduLead
-              </span>
-              <span className="block text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">
-                CRM Portal
-              </span>
-            </div>
-          </Link>
+          <div className="flex items-center gap-4">
+            {/* Mobile Menu Toggle */}
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="md:hidden p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <Users className="w-5 h-5" />
+            </button>
 
-          {/* Navigation Links */}
+            {/* Logo */}
+            <Link to="/" className="flex items-center gap-2.5 group">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform duration-200">
+                <GraduationCap className="w-5.5 h-5.5" />
+              </div>
+              <div className="hidden xs:block">
+                <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 bg-clip-text text-transparent dark:from-indigo-400 dark:via-purple-400 dark:to-cyan-400">
+                  EduLead
+                </span>
+                <span className="block text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">
+                  CRM Portal
+                </span>
+              </div>
+            </Link>
+          </div>
+
+          {/* Navigation Links - Desktop */}
           <nav className="hidden md:flex items-center gap-1.5 h-full">
             {navLinks.map((link) => {
               const isActive = location.pathname === link.path || (link.path === '/leads' && location.pathname.startsWith('/leads'));
@@ -122,9 +138,9 @@ export default function MainLayout() {
           </nav>
 
           {/* Quick Actions Panel */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             
-            {/* Search Bar */}
+            {/* Search Bar - Desktop */}
             <form onSubmit={handleSearchSubmit} className="relative hidden lg:block">
               <input
                 type="text"
@@ -202,40 +218,80 @@ export default function MainLayout() {
               </AnimatePresence>
             </div>
 
-            {/* Flat Profile Info (no dropdown) */}
+            {/* Profile Info */}
             <div className="flex items-center gap-2">
               {/* Avatar */}
               <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white font-bold text-xs flex items-center justify-center shadow-md shadow-purple-500/10 shrink-0">
                 {userInitials}
               </div>
-              {/* Name + Role + Badge */}
+              {/* Name + Role - Hidden on mobile */}
               <div className="hidden sm:block text-left">
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-bold text-slate-700 dark:text-slate-300 leading-tight">{displayName}</span>
-                  {/* {isAdmin && (
-                    <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-md shadow-sm">
-                      Admin
-                    </span>
-                  )} */}
                 </div>
                 <span className="block text-[10px] text-slate-400 font-semibold">{userRole}</span>
               </div>
             </div>
 
-            {/* Logout Button — always visible, rightmost */}
+            {/* Logout Button */}
             <button
               onClick={() => {
                 logout();
                 navigate('/login');
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-rose-600 hover:text-white dark:text-rose-400 bg-rose-50 hover:bg-rose-600 dark:bg-rose-950/30 dark:hover:bg-rose-600 dark:hover:text-white border border-rose-200/60 dark:border-rose-900/40 hover:border-rose-600 rounded-xl transition-all duration-200 shadow-sm"
+              className="p-2 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-rose-200/20 dark:border-rose-900/20 transition-all duration-200"
+              title="Logout"
             >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline"></span>
+              <LogOut className="w-5 h-5" />
             </button>
 
           </div>
         </div>
+
+        {/* Mobile Navigation Menu */}
+        <AnimatePresence>
+          {showMobileMenu && (
+            <div className="md:hidden" ref={mobileMenuRef}>
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="border-t border-slate-200/50 dark:border-slate-800/50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md"
+              >
+                <div className="px-4 py-4 space-y-2">
+                  {/* Mobile Search */}
+                  <form onSubmit={handleSearchSubmit} className="relative mb-4">
+                    <input
+                      type="text"
+                      placeholder="Search leads..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 text-sm rounded-xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800/50 focus:outline-none dark:text-slate-200"
+                    />
+                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+                  </form>
+
+                  {navLinks.map((link) => (
+                    <NavLink
+                      key={link.path}
+                      to={link.path}
+                      onClick={() => setShowMobileMenu(false)}
+                      className={({ isActive }) => `
+                        flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all
+                        ${isActive 
+                          ? 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400' 
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/50'}
+                      `}
+                    >
+                      <link.icon className="w-4.5 h-4.5" />
+                      {link.label}
+                    </NavLink>
+                  ))}
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </header>
 
       {/* Main Content Area */}

@@ -206,45 +206,47 @@ export default function LeadDetailsPage() {
   return (
     <div className="space-y-6">
       {/* Back navigation & Actions Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <Link 
           to="/leads" 
           className="text-xs font-bold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 flex items-center gap-1.5 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" /> Back to Directory
+          <ArrowLeft className="w-4 h-4" /> <span className="hidden xs:inline">Back to Directory</span><span className="xs:hidden">Back</span>
         </Link>
         {leadForm?.name === "Active Intake Form" && (
           <Link
             to={`/leads/edit/${lead.id}`}
-            className="px-3.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 hover:bg-slate-50/50 border border-slate-200/50 dark:border-slate-800 rounded-xl flex items-center gap-1.5 transition-all"
+            className="px-3.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 hover:bg-slate-50/50 border border-slate-200/50 dark:border-slate-800 rounded-xl flex items-center gap-1.5 transition-all shadow-sm"
           >
-            <Edit className="w-3.5 h-3.5" /> Edit Profile
+            <Edit className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Edit Profile</span><span className="xs:hidden">Edit</span>
           </Link>
         )}
       </div>
 
       {/* Student Profile Info Banner */}
-      <div className="glass-panel p-6 rounded-3xl border border-slate-200/50 dark:border-slate-800/30 bg-gradient-to-r from-indigo-500/5 to-purple-500/5">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="glass-panel p-5 sm:p-6 rounded-3xl border border-slate-200/50 dark:border-slate-800/30 bg-gradient-to-r from-indigo-500/5 to-purple-500/5">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white text-lg font-black shadow-lg shadow-indigo-500/10">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white text-base sm:text-lg font-black shadow-lg shadow-indigo-500/10 shrink-0">
               {(lead.full_name || '').split(' ').map(n => n[0]).join('')}
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2.5">
-                <h2 className="text-lg font-black text-slate-800 dark:text-slate-100">{lead.full_name}</h2>
+                <h2 className="text-base sm:text-lg font-black text-slate-800 dark:text-slate-100 truncate">{lead.full_name}</h2>
                 <StatusBadge status={lead.status} />
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex flex-wrap gap-x-4 gap-y-1">
-                <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> {lead.email}</span>
-                <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {lead.phone}</span>
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 mt-1.5 flex flex-wrap gap-x-4 gap-y-1.5">
+                <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-indigo-500" /> {lead.email}</span>
+                <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-indigo-500" /> {lead.phone}</span>
               </p>
             </div>
           </div>
-          <div className="text-left md:text-right shrink-0">
-            <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">Assigned Counselor</span>
-            <span className="block text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">{getCounselorName(lead.counselor_id) || 'Unassigned'}</span>
-            <span className="block text-[9px] text-slate-400 mt-1">Inquiry Registered: {new Date(lead.created_at).toLocaleDateString()}</span>
+          <div className="flex flex-row md:flex-col justify-between items-center md:items-end gap-2 pt-4 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-slate-800/50">
+            <div className="text-left md:text-right">
+              <span className="block text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider">Assigned Counselor</span>
+              <span className="block text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">{getCounselorName(lead.counselor_id) || 'Unassigned'}</span>
+            </div>
+            <span className="text-[9px] text-slate-400">Registered: {new Date(lead.created_at).toLocaleDateString()}</span>
           </div>
         </div>
       </div>

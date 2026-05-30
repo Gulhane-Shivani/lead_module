@@ -150,27 +150,27 @@ export default function LeadListPage() {
           <button
             onClick={handleExport}
             disabled={!filteredLeads.length}
-            className="px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 border border-slate-200/60 dark:border-slate-800 rounded-xl flex items-center gap-2 transition-all duration-150 shadow-sm disabled:opacity-50"
+            className="flex-1 sm:flex-none px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 border border-slate-200/60 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 transition-all duration-150 shadow-sm disabled:opacity-50"
           >
-            <Download className="w-4 h-4" /> Export CSV
+            <Download className="w-4 h-4" /> <span className="hidden xs:inline">Export CSV</span><span className="xs:hidden">Export</span>
           </button>
           <Link
             to="/leads/add"
-            className="px-4 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-xl flex items-center gap-1.5 transition-all shadow-md shadow-indigo-500/10 hover-scale"
+            className="flex-1 sm:flex-none px-4 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md shadow-indigo-500/10 hover-scale"
           >
-            <Plus className="w-4 h-4" /> Add Lead
+            <Plus className="w-4 h-4" /> <span className="hidden xs:inline">Add Lead</span><span className="xs:hidden">Add</span>
           </Link>
         </div>
       </div>
 
       {/* Filters Card */}
       <div className="glass-panel p-5 rounded-3xl space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
           {/* Text Search */}
-          <div className={`relative ${isAdmin ? 'md:col-span-2' : 'md:col-span-3'}`}>
+          <div className={`relative sm:col-span-2 ${isAdmin ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
             <input
               type="text"
-              placeholder="Search by student name, email, phone..."
+              placeholder="Search leads..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2.5 text-xs rounded-xl bg-white/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/80 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 dark:text-slate-200 placeholder-slate-400"
@@ -218,7 +218,7 @@ export default function LeadListPage() {
             <select
               value={counselorFilter}
               onChange={(e) => setCounselorFilter(e.target.value)}
-              className="w-full px-3 py-2.5 text-xs rounded-xl bg-white/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/80 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:text-slate-300"
+              className="w-full px-3 py-2.5 text-xs rounded-xl bg-white/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/80 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:text-slate-300 sm:col-span-2 lg:col-span-1"
             >
               <option value="">All Counselors</option>
               {uniqueCounselors.map((c, i) => (

@@ -203,29 +203,29 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-5">
         {kpis.map((kpi, idx) => (
           <div
             key={idx}
-            className={`glass-panel border ${kpi.borderColor} p-5 rounded-2xl flex flex-col justify-between bg-gradient-to-br ${kpi.gradient}`}
+            className={`glass-panel border ${kpi.borderColor} p-4 sm:p-5 rounded-2xl flex flex-col justify-between bg-gradient-to-br ${kpi.gradient} ${idx === kpis.length - 1 ? 'col-span-2 lg:col-span-1' : ''}`}
           >
             <div className="flex items-start justify-between">
-              <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                 {kpi.title}
               </span>
-              <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 flex items-center justify-center shadow-sm">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 flex items-center justify-center shadow-sm shrink-0">
                 {kpi.icon}
               </div>
             </div>
-            <div className="mt-4">
-              <h3 className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 leading-none">
+            <div className="mt-3 sm:mt-4">
+              <h3 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-slate-100 leading-none">
                 {kpi.value}
               </h3>
-              <div className="flex items-center gap-1 mt-2.5 text-[10px] font-bold">
+              <div className="flex items-center gap-1 mt-2 sm:mt-2.5 text-[9px] sm:text-[10px] font-bold">
                 {kpi.isPositive ? (
-                  <ArrowUpRight className="w-3.5 h-3.5 text-emerald-500" />
+                  <ArrowUpRight className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-emerald-500" />
                 ) : (
-                  <ArrowDownRight className="w-3.5 h-3.5 text-rose-500" />
+                  <ArrowDownRight className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-rose-500" />
                 )}
                 <span className={kpi.isPositive ? 'text-emerald-500' : 'text-rose-500'}>
                   {kpi.change}

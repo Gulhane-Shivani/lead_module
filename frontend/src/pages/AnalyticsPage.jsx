@@ -163,41 +163,27 @@ export default function AnalyticsPage() {
           <button
             onClick={handleExportLeads}
             disabled={!leads.length}
-            className="px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-xl flex items-center gap-2 transition-all shadow-sm hover:border-indigo-500/40 disabled:opacity-50"
+            className="flex-1 sm:flex-none px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm hover:border-indigo-500/40 disabled:opacity-50"
           >
-            <Download className="w-4 h-4" /> Export Leads
+            <Download className="w-4 h-4" /> <span className="hidden xs:inline">Export Leads</span><span className="xs:hidden">Leads</span>
           </button>
           {isAdmin && (
             <button
               onClick={handleExportCounselors}
               disabled={!counselorsPerformance.length}
-              className="px-4 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-xl flex items-center gap-2 transition-all shadow-sm shadow-indigo-500/20 disabled:opacity-50"
+              className="flex-1 sm:flex-none px-4 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-xl flex items-center justify-center gap-2 transition-all shadow-sm shadow-indigo-500/20 disabled:opacity-50"
             >
-              <Download className="w-4 h-4" /> Export Report
+              <Download className="w-4 h-4" /> <span className="hidden xs:inline">Export Report</span><span className="xs:hidden">Report</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Summary KPI Strip */}
-      {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Leads', value: leads.length, color: 'text-indigo-600', bg: 'bg-indigo-50 dark:bg-indigo-950/20', border: 'border-indigo-100 dark:border-indigo-900/30' },
-          { label: 'Interested', value: leads.filter(l => ['Interested', 'Admission Confirmed'].includes(l.status)).length, color: 'text-cyan-600', bg: 'bg-cyan-50 dark:bg-cyan-950/20', border: 'border-cyan-100 dark:border-cyan-900/30' },
-          { label: 'Admissions Confirmed', value: funnelStages[3].count, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-950/20', border: 'border-emerald-100 dark:border-emerald-900/30' },
-          { label: 'Conversion Rate', value: `${conversionRate}%`, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-950/20', border: 'border-purple-100 dark:border-purple-900/30' },
-        ].map((kpi, i) => (
-          <div key={i} className={`glass-panel p-4 rounded-2xl border ${kpi.border}`}>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">{kpi.label}</p>
-            <p className={`text-2xl font-extrabold ${kpi.color}`}>{kpi.value}</p>
-          </div>
-        ))}
-      </div> */}
       {/* Funnel + Sources Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* Conversion Funnel */}
-        <div className="lg:col-span-2 glass-panel p-6 rounded-3xl flex flex-col justify-between">
+        <div className="lg:col-span-2 glass-panel p-5 sm:p-6 rounded-3xl flex flex-col justify-between">
           <div>
             <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-200">
               Admissions Conversion Funnel
@@ -209,11 +195,11 @@ export default function AnalyticsPage() {
 
           <div className="space-y-4 my-6">
             {funnelWithPct.map((stage, idx) => (
-              <div key={idx} className="space-y-1">
+              <div key={idx} className="space-y-1.5">
                 <div className="flex justify-between items-center text-xs font-bold">
                   <span className="text-slate-700 dark:text-slate-300">{stage.name}</span>
                   <span className="text-slate-400 dark:text-slate-500">
-                    {stage.count} Students ({stage.pct}%)
+                    {stage.count} <span className="hidden xs:inline">Students</span> ({stage.pct}%)
                   </span>
                 </div>
                 <div className="w-full bg-slate-100 dark:bg-slate-900 h-8 rounded-xl overflow-hidden border border-slate-200/20 dark:border-slate-800/40">
@@ -227,37 +213,37 @@ export default function AnalyticsPage() {
           </div>
 
           <div className="text-[11px] text-slate-400 border-t border-slate-100 dark:border-slate-800/50 pt-3">
-            🎯 Funnel target: <strong>15%</strong> conversion. Currently at <strong>{conversionRate}%</strong>
+            🎯 Funnel target: <strong>15%</strong>. Current: <strong>{conversionRate}%</strong>
             {conversionRate >= 15
-              ? <span className="ml-1 text-emerald-500 font-bold">✓ Target Met</span>
-              : <span className="ml-1 text-amber-500 font-bold">↑ Below Target</span>
+              ? <span className="ml-1 text-emerald-500 font-bold">✓ Met</span>
+              : <span className="ml-1 text-amber-500 font-bold">↑ Below</span>
             }
           </div>
         </div>
 
         {/* Source Channels */}
-        <div className="glass-panel p-6 rounded-3xl flex flex-col">
+        <div className="glass-panel p-5 sm:p-6 rounded-3xl flex flex-col">
           <div className="mb-4">
             <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-200">
-              Source Channels Performance
+              Source Channels
             </h3>
             <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-              Channels sorted by total inquiry registration volume
+              Channels sorted by inquiry volume
             </p>
           </div>
 
           <div className="flex-1 space-y-4 overflow-y-auto max-h-[300px] pr-1">
             {sourcesBreakdown.length === 0 ? (
-              <div className="text-center py-10 text-slate-400 text-xs">No source records available</div>
+              <div className="text-center py-10 text-slate-400 text-xs">No records</div>
             ) : (
               sourcesBreakdown.map((item, idx) => {
                 const colors = ['bg-indigo-500', 'bg-purple-500', 'bg-cyan-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500'];
                 return (
                   <div key={idx} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-700 dark:text-slate-300">{item.name}</span>
-                      <span className="text-slate-500 dark:text-slate-400 font-semibold">
-                        {item.count} Leads ({item.pct}%)
+                      <span className="font-bold text-slate-700 dark:text-slate-300 truncate pr-2">{item.name}</span>
+                      <span className="text-slate-500 dark:text-slate-400 font-semibold shrink-0">
+                        {item.count} ({item.pct}%)
                       </span>
                     </div>
                     <div className="w-full bg-slate-100 dark:bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-200/20 dark:border-slate-800/40">
